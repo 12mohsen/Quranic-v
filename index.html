@@ -545,10 +545,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   <button class="ipo-close" onclick="closeImgPreview()"><i class="fa fa-times"></i></button>
   <img id="ipoImg" src="" alt="">
   <p class="ipo-hint" id="ipoHint"></p>
-  <div class="ipo-btns">
-    <div style="text-align:center"><button class="ipo-btn" style="background:#25D366" onclick="ipoDoShare()"><i class="fa fa-share-nodes"></i></button><div class="ipo-btn-label" id="ipoShareLabel">مشاركة</div></div>
-    <div style="text-align:center"><button class="ipo-btn" style="background:#4a90d9" onclick="ipoDownload()"><i class="fa fa-download"></i></button><div class="ipo-btn-label">تحميل</div></div>
-  </div>
+  <div class="ipo-btns" id="ipoBtns"></div>
 </div>
 
 <!-- SHARE PICKER (for text sharing to apps) -->
@@ -2605,48 +2602,84 @@ function spEmail(){ window.open('mailto:?subject='+encodeURIComponent(T('surah')
 function spSMS(){ window.open('sms:?body='+encodeURIComponent(_spText),'_blank'); closeSharePicker(); }
 function spCopy(){ silentCopy(_spText); showToast(T('copied')); closeSharePicker(); }
 
-// ---- IMAGE PREVIEW + SHARE/DOWNLOAD ----
+// ---- IMAGE PREVIEW + SHARE/DOWNLOAD (WebView-proof) ----
+let _ipoDataUrl=null;
 let _ipoBlob=null;
+
 function closeImgPreview(){
   document.getElementById('imgPreviewOverlay').classList.remove('show');
-  const img=document.getElementById('ipoImg');
-  if(img.src&&img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);
-  img.src='';_ipoBlob=null;
+  document.getElementById('ipoImg').src='';
+  _ipoDataUrl=null;_ipoBlob=null;
 }
-function ipoDownload(){
+
+// Method 1: Native file share (works on real browsers, some modern WebViews)
+function ipoNativeShare(){
   if(!_ipoBlob)return;
+  try{
+    const file=new File([_ipoBlob],'quran-verse.png',{type:'image/png'});
+    navigator.share({files:[file]}).then(()=>closeImgPreview()).catch(()=>{});
+  }catch(e){}
+}
+
+// Method 2: Download via <a download> (works on real browsers)
+function ipoDownload(){
+  if(!_ipoDataUrl)return;
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(_ipoBlob);
+  a.href=_ipoDataUrl;
   a.download='quran-verse.png';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   showToast(currentLang==='en'?'Image downloaded':'تم تحميل الصورة');
 }
-function ipoDoShare(){
-  if(!_ipoBlob)return;
-  // Try native file share first
-  if(hasNativeFileShare()){
-    const file=new File([_ipoBlob],'quran-verse.png',{type:'image/png'});
-    navigator.share({files:[file]}).then(()=>closeImgPreview()).catch(()=>ipoDownload());
-    return;
+
+// Method 3: Open image in new page for long-press save (ALWAYS works in WebView)
+function ipoOpenForSave(){
+  if(!_ipoDataUrl)return;
+  const w=window.open('','_blank');
+  if(w){
+    const isEn=currentLang==='en';
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>${isEn?'Save Image':'حفظ الصورة'}</title>
+      <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:16px;font-family:sans-serif}
+      img{max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 4px 30px rgba(0,0,0,0.5)}
+      p{color:#aaa;margin-top:16px;font-size:14px;text-align:center;direction:${isEn?'ltr':'rtl'}}</style></head>
+      <body><img src="${_ipoDataUrl}"><p>${isEn?'📱 Long-press the image → Save image':'📱 اضغط مطولاً على الصورة ← حفظ الصورة'}</p></body></html>`);
+    w.document.close();
+    showToast(isEn?'Long-press image to save':'اضغط مطولاً على الصورة للحفظ');
   }
-  // Fallback: download the image
-  ipoDownload();
 }
 
 function shareAsImage(){
   const c=document.getElementById('shareCanvas');
-  c.toBlob(blob=>{
-    if(!blob)return;
-    _ipoBlob=blob;
-    const url=URL.createObjectURL(blob);
-    document.getElementById('ipoImg').src=url;
-    const isEn=currentLang==='en';
-    document.getElementById('ipoHint').textContent=isEn
-      ?'Share or download the verse image'
-      :'شارك أو حمّل صورة الآية';
-    document.getElementById('ipoShareLabel').textContent=isEn?'Share':'مشاركة';
-    document.getElementById('imgPreviewOverlay').classList.add('show');
-  });
+  _ipoDataUrl=c.toDataURL('image/png');
+  // Also create blob for native share
+  c.toBlob(blob=>{_ipoBlob=blob;});
+
+  document.getElementById('ipoImg').src=_ipoDataUrl;
+  const isEn=currentLang==='en';
+  const canFileShare=hasNativeFileShare();
+
+  // Build buttons dynamically
+  const btns=document.getElementById('ipoBtns');
+  let html='';
+
+  if(canFileShare){
+    // Native share available (real browser or modern WebView)
+    html+=`<div style="text-align:center"><button class="ipo-btn" style="background:#25D366" onclick="ipoNativeShare()"><i class="fa fa-share-nodes"></i></button><div class="ipo-btn-label">${isEn?'Share':'مشاركة'}</div></div>`;
+  }
+
+  // Save to gallery - opens in new tab (works EVERYWHERE)
+  html+=`<div style="text-align:center"><button class="ipo-btn" style="background:#4a90d9" onclick="ipoOpenForSave()"><i class="fa fa-image"></i></button><div class="ipo-btn-label">${isEn?'Save':'حفظ الصورة'}</div></div>`;
+
+  // Download attempt
+  html+=`<div style="text-align:center"><button class="ipo-btn" style="background:#8e44ad" onclick="ipoDownload()"><i class="fa fa-download"></i></button><div class="ipo-btn-label">${isEn?'Download':'تحميل'}</div></div>`;
+
+  btns.innerHTML=html;
+
+  document.getElementById('ipoHint').textContent=canFileShare
+    ?(isEn?'Share the image to WhatsApp or other apps':'شارك الصورة إلى واتساب أو التطبيقات الأخرى')
+    :(isEn?'Press "Save" to save the image to your phone':'اضغط "حفظ الصورة" لفتح الصورة وحفظها في جهازك');
+
+  document.getElementById('imgPreviewOverlay').classList.add('show');
 }
 
 // ---- TEXT SHARE ----

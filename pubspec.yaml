@@ -1,0 +1,21 @@
+name: quran_player
+description: A Flutter Quran player with reciter selection and verse sharing
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  just_audio: ^0.9.35
+  just_audio_media_kit: ^0.0.2
+  screenshot: ^2.1.0
+  share_plus: ^7.2.1
+  google_fonts: ^6.1.0
+  path_provider: ^2.1.1
+
+flutter:
+  uses-material-design: true

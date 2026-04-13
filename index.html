@@ -1078,7 +1078,7 @@ function pickReciterForSurah(id) {
     // default to Alafasy
     currentReciter = reciters.find(r=>r.folder==='Alafasy') || reciters[0];
     if (currentReciter) playSurah(id);
-    else alert(currentLang==='en'?'Reciters not loaded yet, please wait.':'لم يتم تحميل القراء بعد، انتظر لحظة.');
+    else showToast(currentLang==='en'?'Reciters not loaded yet, please wait.':'لم يتم تحميل القراء بعد، انتظر لحظة.');
   }
 }
 
@@ -2471,8 +2471,42 @@ function wrapTxt(ctx,text,mw){
   for(const wd of w){const t=ln+(ln?' ':'')+wd;if(ctx.measureText(t).width>mw&&ln){lines.push(ln);ln=wd;}else ln=t;}
   if(ln)lines.push(ln);return lines;
 }
+// ============================================================
+// TOAST NOTIFICATION (replaces all alert/prompt pop-ups)
+// ============================================================
+function showToast(msg, duration){
+  duration = duration || 2500;
+  let t=document.getElementById('_toast');
+  if(!t){
+    t=document.createElement('div');t.id='_toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(46,204,113,0.95);color:#fff;padding:12px 28px;border-radius:25px;font-size:14px;z-index:99999;transition:opacity .4s;pointer-events:none;font-family:sans-serif;box-shadow:0 4px 15px rgba(0,0,0,0.3);max-width:85vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{t.style.opacity='0';},duration);
+}
+
+// ============================================================
+// CLIPBOARD (fallback for WebView / APK)
+// ============================================================
 function copyToClipboard(text){
-  // Fallback clipboard copy that works in WebViews
+  try{
+    // Modern async clipboard API
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=>{
+        showToast(T('copied'));
+      }).catch(()=>{
+        execCopy(text);
+      });
+      return;
+    }
+    execCopy(text);
+  }catch(e){
+    execCopy(text);
+  }
+}
+function execCopy(text){
   try{
     const ta=document.createElement('textarea');
     ta.value=text;
@@ -2481,94 +2515,81 @@ function copyToClipboard(text){
     ta.focus();ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    return true;
-  }catch(e){return false;}
+    showToast(T('copied'));
+  }catch(e){
+    showToast(currentLang==='en'?'Copy failed':'فشل النسخ');
+  }
 }
-function canNativeShare(){
-  try{return !!(navigator.share);}catch(e){return false;}
-}
+
+// ============================================================
+// SHARE SYSTEM (navigator.share → clipboard fallback)
+// ============================================================
 function shareAsImage(){
-  const c=document.getElementById('shareCanvas');
   try{
-    c.toBlob(blob=>{
-      if(!blob){alert(currentLang==='en'?'Error generating image':'خطأ في إنشاء الصورة');return;}
-      // Try native share with file
-      if(canNativeShare()){
-        try{
-          const file=new File([blob],'quran-verse.png',{type:'image/png'});
-          if(navigator.canShare&&navigator.canShare({files:[file]})){
-            navigator.share({files:[file]}).catch(()=>{
+    const c=document.getElementById('shareCanvas');
+    c.toBlob(function(blob){
+      if(!blob){
+        showToast(currentLang==='en'?'Error generating image':'خطأ في إنشاء الصورة');
+        return;
+      }
+      // Try Web Share API with file
+      try{
+        if(navigator.share){
+          var file=new File([blob],'quran-verse.png',{type:'image/png'});
+          if(navigator.canShare && navigator.canShare({files:[file]})){
+            navigator.share({files:[file]}).catch(function(){
               downloadBlob(blob);
             });
             return;
           }
-        }catch(e){}
-      }
-      // Fallback: download the image
+        }
+      }catch(e){}
+      // Fallback: download
       downloadBlob(blob);
     },'image/png');
   }catch(e){
-    alert(currentLang==='en'?'Error sharing image':'خطأ في مشاركة الصورة');
+    showToast(currentLang==='en'?'Error sharing image':'خطأ في مشاركة الصورة');
   }
 }
 function downloadBlob(blob){
   try{
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
     a.href=url;a.download='quran-verse.png';
     a.style.display='none';
     document.body.appendChild(a);
     a.click();
-    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},500);
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},500);
+    showToast(currentLang==='en'?'Image saved':'تم حفظ الصورة');
   }catch(e){
-    alert(currentLang==='en'?'Could not download image':'لم يتمكن من تحميل الصورة');
+    showToast(currentLang==='en'?'Could not save image':'لم يتمكن من حفظ الصورة');
   }
 }
 function shareAsText(withT){
-  // Build text with verse numbers for multiple verses
-  let txt='';
+  // Build text
+  var txt='';
   if(shareData.length===1){
     txt=shareData[0].txt;
   } else {
-    // Multiple verses - show each with its number
-    txt=shareData.map(v=>`﴿${v.a}﴾ ${v.txt}`).join('\n\n');
+    txt=shareData.map(function(v){return '\uFD3F'+v.a+'\uFD3E '+v.txt;}).join('\n\n');
   }
   if(!withT) txt=txt.replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g,'');
-  const sn=surahNameById(shareData[0].s)||shareData[0].sn||'';
-  const f=shareData[0],l=shareData[shareData.length-1];
-  let ref=`\n[${sn}: ${f.a}`;if(shareData.length>1)ref+=`-${l.a}`;ref+=']';
-  let full=`${txt}${ref}`;
+  var sn=surahNameById(shareData[0].s)||shareData[0].sn||'';
+  var f=shareData[0],l=shareData[shareData.length-1];
+  var ref='\n['+sn+': '+f.a;if(shareData.length>1)ref+='-'+l.a;ref+=']';
+  var full=txt+ref;
   if(document.getElementById('shareBrand').checked) full+='\n\n'+T('brand');
-  // Try native share first (works on mobile browsers)
-  if(canNativeShare()){
-    navigator.share({text:full}).catch(()=>{
-      // If native share fails, fallback to copy
-      fallbackCopyShare(full);
-    });
-  } else {
-    fallbackCopyShare(full);
-  }
-}
-function fallbackCopyShare(text){
-  const copied=copyToClipboard(text);
-  if(copied){
-    // Show a nice toast instead of alert
-    showToast(T('copied'));
-  } else {
-    // Last resort: prompt so user can manually copy
-    prompt(currentLang==='en'?'Copy this text:':'انسخ هذا النص:', text);
-  }
-}
-function showToast(msg){
-  let t=document.getElementById('_toast');
-  if(!t){
-    t=document.createElement('div');t.id='_toast';
-    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(46,204,113,0.95);color:#fff;padding:10px 24px;border-radius:25px;font-size:14px;z-index:99999;transition:opacity .4s;pointer-events:none;font-family:sans-serif';
-    document.body.appendChild(t);
-  }
-  t.textContent=msg;t.style.opacity='1';
-  clearTimeout(t._timer);
-  t._timer=setTimeout(()=>{t.style.opacity='0';},2500);
+  // Try Web Share API first (opens WhatsApp, Telegram, etc.)
+  try{
+    if(navigator.share){
+      navigator.share({text:full}).catch(function(){
+        copyToClipboard(full);
+      });
+      return;
+    }
+  }catch(e){}
+  // Fallback: copy to clipboard
+  copyToClipboard(full);
 }
 
 // TEXT MUSHAF SWIPE

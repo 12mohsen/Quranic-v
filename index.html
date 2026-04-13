@@ -533,14 +533,6 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
 
 <script>
 // ============================================================
-// WEBVIEW DETECTION
-// ============================================================
-window._isWebView = (function(){
-  const ua=navigator.userAgent||'';
-  return /wv|WebView|AppCreator|; wv\)/i.test(ua) || (typeof window.Android!=='undefined') || (window.webkit&&window.webkit.messageHandlers) || !/Safari/.test(ua)&&/AppleWebKit/.test(ua);
-})();
-
-// ============================================================
 // i18n - LANGUAGE SYSTEM
 // ============================================================
 let currentLang = localStorage.getItem('q_lang') || 'ar';
@@ -2479,29 +2471,58 @@ function wrapTxt(ctx,text,mw){
   for(const wd of w){const t=ln+(ln?' ':'')+wd;if(ctx.measureText(t).width>mw&&ln){lines.push(ln);ln=wd;}else ln=t;}
   if(ln)lines.push(ln);return lines;
 }
-function copyToClipboardFallback(text){
-  const ta=document.createElement('textarea');
-  ta.value=text;ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
-  document.body.appendChild(ta);ta.focus();ta.select();
-  try{document.execCommand('copy');return true;}catch(e){return false;}
-  finally{document.body.removeChild(ta);}
+function copyToClipboard(text){
+  // Fallback clipboard copy that works in WebViews
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    return true;
+  }catch(e){return false;}
 }
-function showCopiedToast(){
-  let t=document.getElementById('copiedToast');
-  if(!t){t=document.createElement('div');t.id='copiedToast';
-    t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(46,204,113,0.95);color:#fff;padding:10px 28px;border-radius:25px;font-size:15px;z-index:99999;pointer-events:none;transition:opacity .4s;font-family:sans-serif';
-    document.body.appendChild(t);}
-  t.textContent=T('copied');t.style.opacity='1';
-  setTimeout(()=>{t.style.opacity='0';},1800);
+function canNativeShare(){
+  try{return !!(navigator.share);}catch(e){return false;}
 }
 function shareAsImage(){
   const c=document.getElementById('shareCanvas');
   try{
-    const dataUrl=c.toDataURL('image/png');
+    c.toBlob(blob=>{
+      if(!blob){alert(currentLang==='en'?'Error generating image':'خطأ في إنشاء الصورة');return;}
+      // Try native share with file
+      if(canNativeShare()){
+        try{
+          const file=new File([blob],'quran-verse.png',{type:'image/png'});
+          if(navigator.canShare&&navigator.canShare({files:[file]})){
+            navigator.share({files:[file]}).catch(()=>{
+              downloadBlob(blob);
+            });
+            return;
+          }
+        }catch(e){}
+      }
+      // Fallback: download the image
+      downloadBlob(blob);
+    },'image/png');
+  }catch(e){
+    alert(currentLang==='en'?'Error sharing image':'خطأ في مشاركة الصورة');
+  }
+}
+function downloadBlob(blob){
+  try{
+    const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=dataUrl;a.download='quran-verse.png';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-  }catch(e){console.error('Share image error:',e);}
+    a.href=url;a.download='quran-verse.png';
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},500);
+  }catch(e){
+    alert(currentLang==='en'?'Could not download image':'لم يتمكن من تحميل الصورة');
+  }
 }
 function shareAsText(withT){
   // Build text with verse numbers for multiple verses
@@ -2518,16 +2539,36 @@ function shareAsText(withT){
   let ref=`\n[${sn}: ${f.a}`;if(shareData.length>1)ref+=`-${l.a}`;ref+=']';
   let full=`${txt}${ref}`;
   if(document.getElementById('shareBrand').checked) full+='\n\n'+T('brand');
-  console.log('Sharing text:', shareData.length, 'verses, length:', full.length);
-  let copied=false;
-  if(navigator.clipboard&&navigator.clipboard.writeText&&!window._isWebView){
-    navigator.clipboard.writeText(full).then(()=>showCopiedToast()).catch(()=>{
-      if(copyToClipboardFallback(full)) showCopiedToast();
+  // Try native share first (works on mobile browsers)
+  if(canNativeShare()){
+    navigator.share({text:full}).catch(()=>{
+      // If native share fails, fallback to copy
+      fallbackCopyShare(full);
     });
   } else {
-    copied=copyToClipboardFallback(full);
-    if(copied) showCopiedToast();
+    fallbackCopyShare(full);
   }
+}
+function fallbackCopyShare(text){
+  const copied=copyToClipboard(text);
+  if(copied){
+    // Show a nice toast instead of alert
+    showToast(T('copied'));
+  } else {
+    // Last resort: prompt so user can manually copy
+    prompt(currentLang==='en'?'Copy this text:':'انسخ هذا النص:', text);
+  }
+}
+function showToast(msg){
+  let t=document.getElementById('_toast');
+  if(!t){
+    t=document.createElement('div');t.id='_toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(46,204,113,0.95);color:#fff;padding:10px 24px;border-radius:25px;font-size:14px;z-index:99999;transition:opacity .4s;pointer-events:none;font-family:sans-serif';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{t.style.opacity='0';},2500);
 }
 
 // TEXT MUSHAF SWIPE

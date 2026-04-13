@@ -572,7 +572,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
     <div class="share-prev"><canvas id="shareCanvas" width="800" height="500"></canvas></div>
     <div class="share-opt"><label><input type="checkbox" id="shareBrand" checked> <span data-i18n="brand">بواسطة تطبيق القرآن الكريم</span></label></div>
     <div class="share-acts">
-      <button class="share-btn img" onclick="shareAsImage()"><i class="fa fa-image"></i> <span data-i18n="shareImage">مشاركة صورة</span></button>
+      <button class="share-btn img" id="btnShareImage" onclick="shareAsImage()"><i class="fa fa-image"></i> <span data-i18n="shareImage">مشاركة صورة</span></button>
       <button class="share-btn txt" onclick="shareAsText(true)"><i class="fa fa-font"></i> <span data-i18n="shareText">مشاركة نص</span></button>
       <button class="share-btn txt" onclick="shareAsText(false)"><i class="fa fa-text-slash"></i> <span data-i18n="shareNoTashkeel">نص بدون تشكيل</span></button>
     </div>
@@ -2732,11 +2732,27 @@ function saveReadState(){
 }
 setInterval(saveReadState, 3000);
 
+// Detect WebView (app) environment
+const isWebView=(function(){
+  const ua=navigator.userAgent||'';
+  if(/wv|WebView/i.test(ua)) return true;
+  if(/Android.*Version\/[\d.]+.*Chrome\/[\d.]+ Mobile/i.test(ua)&&!/Chrome\/[\d.]+ Mobile Safari/i.test(ua)) return true;
+  if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches) return false;
+  if(typeof window.Android!=='undefined') return true;
+  if(!navigator.share) return true;
+  return false;
+})();
+
 // Restore last state on load
 async function restoreState(){
   await loadReciters();
   loadLocalQuran();
   initTextSwipe();
+  // Hide image share in WebView
+  if(isWebView){
+    const b=document.getElementById('btnShareImage');
+    if(b) b.style.display='none';
+  }
   // Restore page
   const savedNav = localStorage.getItem('q_page');
   if(savedNav && savedNav!=='home') showPage(savedNav);

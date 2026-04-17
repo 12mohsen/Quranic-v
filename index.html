@@ -85,43 +85,29 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .pdf-t-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;gap:6px;transition:.2s}
 .pdf-t-btn:hover{background:rgba(255,255,255,0.28)}
 .pdf-t-btn:disabled{opacity:.4;cursor:not-allowed}
+/* Modern Goto Button */
+.btn-goto-modern{background:linear-gradient(135deg,#27a065 0%,#1e8a54 100%);border:none;color:#fff;padding:10px 20px;border-radius:25px;cursor:pointer;font-size:15px;display:flex;align-items:center;gap:8px;transition:all .3s ease;box-shadow:0 4px 15px rgba(39,160,101,0.4);font-weight:500}
+.btn-goto-modern:hover{background:linear-gradient(135deg,#2bb873 0%,#27a065 100%);transform:translateY(-2px);box-shadow:0 6px 20px rgba(39,160,101,0.5)}
+.btn-goto-modern:active{transform:translateY(0);box-shadow:0 2px 10px rgba(39,160,101,0.4)}
+.btn-goto-modern i{font-size:14px}
 .pdf-page-info{background:rgba(255,255,255,0.1);padding:10px 16px;border-radius:8px;font-size:16px;min-width:120px;text-align:center}
-.pdf-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;color:var(--muted);gap:16px;font-size:16px}
-.spinner{width:44px;height:44px;border:4px solid rgba(0,0,0,0.1);border-top:4px solid var(--primary);border-radius:50%;animation:spin 0.9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.mushaf-scene{background:radial-gradient(ellipse at center,#217080 0%,#0f3a46 100%);display:flex;justify-content:center;align-items:center;padding:40px 28px;min-height:700px;overflow:hidden;user-select:none;cursor:grab}
-.mushaf-scene:active{cursor:grabbing}
-.book-container{position:relative;display:inline-flex;border-radius:6px;padding:10px;background:linear-gradient(135deg,#1a5e6e,#0d3540);box-shadow:0 0 0 2px rgba(255,255,255,0.08),0 40px 120px rgba(0,0,0,0.8)}
-.mushaf-spread{display:flex;align-items:stretch;border-radius:4px}
-.mushaf-spread.spread-back{position:absolute;top:10px;left:10px;z-index:1}
-.mushaf-spread.spread-front{position:relative;z-index:2}
-.mushaf-page{background:#f5f0e8;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
-.mushaf-page img{display:block;height:680px;width:auto;object-fit:contain;transition:opacity .3s}
-.mushaf-page img.loading{opacity:0}
-.page-loading{position:absolute;display:flex;flex-direction:column;align-items:center;gap:8px;color:#888;font-size:12px}
-.page-loading .spinner{width:28px;height:28px;border-width:3px}
-.page-right{border-radius:4px 0 0 4px;box-shadow:inset -6px 0 18px rgba(0,0,0,0.15),6px 0 18px rgba(0,0,0,0.35)}
-.page-left{border-radius:0 4px 4px 0;box-shadow:inset 6px 0 18px rgba(0,0,0,0.15),-6px 0 18px rgba(0,0,0,0.35)}
-.mushaf-spine{width:20px;flex-shrink:0;background:linear-gradient(to right,rgba(0,0,0,0.3) 0%,rgba(200,160,60,0.6) 35%,rgba(240,200,80,0.4) 50%,rgba(200,160,60,0.6) 65%,rgba(0,0,0,0.3) 100%)}
-.pdf-hint{text-align:center;padding:10px;color:rgba(255,255,255,0.5);font-size:13px;background:linear-gradient(135deg,#1a5e6e,#0d3540)}
 
 /* FULLSCREEN */
-.pdf-wrap:-webkit-full-screen{border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column}
-.pdf-wrap:-moz-full-screen{border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column}
-.pdf-wrap:fullscreen{border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column}
-.pdf-wrap:fullscreen .mushaf-scene,
-.pdf-wrap:-webkit-full-screen .mushaf-scene,
-.pdf-wrap:-moz-full-screen .mushaf-scene{flex:1;min-height:0;padding:16px}
-.pdf-wrap:fullscreen .mushaf-page img,
-.pdf-wrap:-webkit-full-screen .mushaf-page img,
-.pdf-wrap:-moz-full-screen .mushaf-page img{height:calc(100vh - 130px);width:auto}
-@media(max-width:900px){
-  .pdf-wrap:fullscreen .mushaf-page img,
-  .pdf-wrap:-webkit-full-screen .mushaf-page img,
-  .pdf-wrap:-moz-full-screen .mushaf-page img{height:calc(100vh - 110px);width:calc(100vw - 20px)}
-}
-.fs-fab{position:absolute;bottom:14px;left:14px;z-index:10;background:rgba(255,255,255,0.18);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);transition:.2s;box-shadow:0 2px 10px rgba(0,0,0,0.4)}
-.fs-fab:hover{background:rgba(255,255,255,0.32)}
+.pdf-wrap:-webkit-full-screen{border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999}
+.pdf-wrap:-moz-full-screen{border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999}
+.pdf-wrap:fullscreen{border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column;position:fixed;inset:0;z-index:9999}
+/* iOS Safari fallback - standalone mode */
+.pdf-wrap.standalone-fs{position:fixed;inset:0;width:100vw;height:100vh;border-radius:0;z-index:9999}
+.pdf-wrap.standalone-fs .text-mushaf{max-height:calc(100vh - 60px)}
+/* Fullscreen toolbar improvements */
+.pdf-wrap:-webkit-full-screen .pdf-toolbar,
+.pdf-wrap:-moz-full-screen .pdf-toolbar,
+.pdf-wrap:fullscreen .pdf-toolbar,
+.pdf-wrap.standalone-fs .pdf-toolbar{padding:16px 24px;gap:12px}
+.pdf-wrap:-webkit-full-screen .text-mushaf,
+.pdf-wrap:-moz-full-screen .text-mushaf,
+.pdf-wrap:fullscreen .text-mushaf,
+.pdf-wrap.standalone-fs .text-mushaf{max-height:calc(100vh - 70px)}
 
 /* BOTTOM PLAYER */
 .player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);background:linear-gradient(135deg,var(--primary-dark),#112d1e);color:#fff;display:flex;align-items:center;padding:0 20px;gap:18px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.3);transform:translateY(100%);transition:transform .3s}
@@ -221,14 +207,11 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
   .pdf-toolbar{padding:8px 10px;gap:6px}
   .pdf-t-btn{padding:8px 12px;font-size:14px}
   .pdf-t-btn span,.pdf-t-btn-label{display:none}
+  /* Modern goto button mobile */
+  .btn-goto-modern{padding:8px 14px;font-size:13px;border-radius:20px}
+  .btn-goto-modern span{display:inline}
+  .btn-goto-modern i{font-size:12px}
   .pm-btn{padding:6px 10px;font-size:12px}
-  /* Mushaf — single page mode */
-  .mushaf-scene{padding:10px 6px;min-height:auto}
-  .book-container{padding:6px}
-  .page-left,.mushaf-spine{display:none!important}
-  .mushaf-spread.spread-back{top:6px;left:6px}
-  .mushaf-page img{height:calc((100vw - 44px) * 1.42);width:calc(100vw - 44px);object-fit:contain}
-  .pdf-hint{font-size:11px;padding:7px}
   /* Player */
   .p-vol{display:none}
   .player{padding:0 14px;gap:10px}
@@ -284,6 +267,27 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .ctx-item i{width:18px;text-align:center;font-size:14px}
 .ctx-sep{height:1px;background:var(--border);margin:4px 0}
 .bm-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+
+/* GOTO MODAL */
+.goto-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.goto-modal.show{display:flex;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.goto-modal-content{background:linear-gradient(145deg,#1a2e22 0%,#15261d 100%);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(39,160,101,0.2);width:100%;max-width:360px;overflow:hidden;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.goto-modal-header{background:linear-gradient(135deg,var(--primary-dark),#1a2e22);padding:20px 24px;display:flex;align-items:center;gap:12px;color:#fff;font-size:18px;font-weight:600;border-bottom:1px solid rgba(39,160,101,0.2)}
+.goto-modal-header i{color:var(--primary-light);font-size:20px}
+.goto-modal-body{padding:24px}
+.goto-modal-body label{display:block;color:var(--muted);font-size:14px;margin-bottom:12px}
+.goto-modal-body input{width:100%;background:rgba(255,255,255,0.05);border:2px solid var(--border);border-radius:12px;padding:14px 16px;color:#fff;font-size:24px;text-align:center;transition:.2s;outline:none;font-family:'Amiri',serif}
+.goto-modal-body input:focus{border-color:var(--primary);background:rgba(39,160,101,0.1)}
+.goto-modal-body input::placeholder{color:rgba(255,255,255,0.3)}
+.goto-range{text-align:center;color:var(--muted);font-size:12px;margin-top:10px;opacity:0.7}
+.goto-modal-footer{display:flex;gap:12px;padding:0 24px 24px}
+.goto-btn{flex:1;padding:14px;border-radius:12px;border:none;font-size:15px;cursor:pointer;transition:.2s;font-weight:500}
+.goto-btn-cancel{background:rgba(255,255,255,0.1);color:#ddeee4}
+.goto-btn-cancel:hover{background:rgba(255,255,255,0.2)}
+.goto-btn-confirm{background:linear-gradient(135deg,#27a065 0%,#1e8a54 100%);color:#fff;box-shadow:0 4px 15px rgba(39,160,101,0.4)}
+.goto-btn-confirm:hover{background:linear-gradient(135deg,#2bb873 0%,#27a065 100%);transform:translateY(-2px);box-shadow:0 6px 20px rgba(39,160,101,0.5)}
 
 /* BOOKMARK PANEL */
 .bm-panel{position:fixed;top:0;left:-320px;width:310px;height:100%;background:#111f17;z-index:300;box-shadow:4px 0 20px rgba(0,0,0,0.5);transition:left .3s;overflow-y:auto}
@@ -343,8 +347,17 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
   .surah-hdr{font-size:20px}
   .bm-panel{width:85vw;left:-85vw}
   .text-mushaf{max-height:75vh;padding:16px 10px}
-  .ctx-menu{min-width:180px}
+  .ctx-menu{min-width:200px;max-width:280px;border-radius:16px;z-index:1000}
+  .ctx-item{padding:14px 18px;font-size:15px;gap:12px}
+  .ctx-item i{width:22px;font-size:16px}
+  .bm-dot{width:14px;height:14px}
+  .ctx-sep{margin:6px 0}
   .text-nav{width:28px;height:44px;font-size:14px}
+  /* Prevent text selection on verses for better touch experience */
+  .vrs{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  /* Ensure context menu is clickable on mobile */
+  .ctx-menu{touch-action:auto}
+  .ctx-item{touch-action:manipulation}
 }
 /* LTR overrides for English */
 html[dir="ltr"] .bm-item{border-right:none;border-left:4px solid}
@@ -412,34 +425,10 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
         <button class="pdf-t-btn" id="btnPrev" onclick="pdfPrev()"><i class="fa fa-chevron-right"></i> <span data-i18n="prev">السابق</span></button>
         <div class="pdf-page-info"><span data-i18n="page">صفحة</span> <span id="pdfPageNum">1</span> / <span id="pdfTotalPages">604</span></div>
         <button class="pdf-t-btn" id="btnNext" onclick="pdfNext()"><span data-i18n="next">التالي</span> <i class="fa fa-chevron-left"></i></button>
-        <button class="pdf-t-btn" id="btnZoomIn" onclick="pdfZoomIn()"><i class="fa fa-search-plus"></i></button>
-        <button class="pdf-t-btn" id="btnZoomOut" onclick="pdfZoomOut()"><i class="fa fa-search-minus"></i></button>
-        <button class="pdf-t-btn" id="btnGoto" onclick="pdfGoto()"><i class="fa fa-location-arrow"></i> <span data-i18n="goTo">انتقال</span></button>
-        <div class="view-toggle"><button class="vt-btn active" id="vtImg" onclick="setView('img')" data-i18n-title="imgOnly" title="للقراءة فقط"><i class="fa fa-image"></i></button><button class="vt-btn" id="vtTxt" onclick="setView('txt')" data-i18n-title="txtMode" title="للاستماع والقراءة ومشاركة صورة أو نص"><i class="fa fa-font"></i></button></div>
+        <button class="pdf-t-btn btn-goto-modern" id="btnGoto" onclick="pdfGoto()"><i class="fa fa-location-arrow"></i> <span data-i18n="goTo">انتقال</span></button>
         <button class="pdf-t-btn" id="btnBm" onclick="openBmPanel()"><i class="fa fa-bookmark"></i> <span data-i18n="bookmarks">الفواصل</span></button>
         <div class="play-modes"><button class="pm-btn" onclick="setPlayMode('page')" id="pm-page" data-i18n="endOfPage">نهاية الصفحة</button><button class="pm-btn" onclick="setPlayMode('surah')" id="pm-surah" data-i18n="endOfSurah">نهاية السورة</button><button class="pm-btn active" onclick="setPlayMode('continuous')" id="pm-continuous" data-i18n="continuous">تلاوة مستمرة</button></div>
         <button class="pdf-t-btn" id="btnFs" onclick="toggleFullscreen()"><i class="fa fa-expand" id="fsIconBar"></i> <span data-i18n="fullscreen">ملء الشاشة</span></button>
-      </div>
-      <div id="pdfLoading" class="pdf-loading">
-        <div class="spinner"></div>
-        <span data-i18n="loadingMushaf">جاري تحميل المصحف الكريم...</span>
-      </div>
-      <div class="mushaf-scene" id="bookScene" style="display:none;position:relative" onwheel="onPdfWheel(event)">
-        <button class="fs-fab" id="fsFab" onclick="toggleFullscreen()" title="ملء الشاشة"><i class="fa fa-expand" id="fsIcon"></i></button>
-        <div class="book-container" id="bookContainer">
-          <!-- Back spread (pre-loaded) -->
-          <div class="mushaf-spread spread-back" id="spreadB">
-            <div class="mushaf-page page-right"><img id="imgBR" alt=""></div>
-            <div class="mushaf-spine"></div>
-            <div class="mushaf-page page-left"><img id="imgBL" alt=""></div>
-          </div>
-          <!-- Front spread (visible) -->
-          <div class="mushaf-spread spread-front" id="spreadA">
-            <div class="mushaf-page page-right"><img id="imgAR" alt=""></div>
-            <div class="mushaf-spine"></div>
-            <div class="mushaf-page page-left"><img id="imgAL" alt=""></div>
-          </div>
-        </div>
       </div>
       <!-- TEXT-BASED MUSHAF VIEW -->
       <div class="text-mushaf" id="textMushaf">
@@ -457,7 +446,6 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
         <div class="quran-text" id="quranText"><div class="spinner"></div></div>
         <div class="pg-num" id="pgNum"></div>
       </div>
-      <div class="pdf-hint" id="pdfHint" style="display:none">اسحب ⟶ للتالي &nbsp;|&nbsp; اسحب ⟵ للسابق &nbsp;|&nbsp; عجلة الفأرة &nbsp;|&nbsp; ← → لوحة مفاتيح</div>
     </div>
   </div>
 
@@ -510,6 +498,25 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
 
 <!-- OVERLAY -->
 <div class="overlay" id="overlay" onclick="closeCtx();closeBmPanel()"></div>
+
+<!-- GOTO MODAL -->
+<div class="goto-modal" id="gotoModal">
+  <div class="goto-modal-content">
+    <div class="goto-modal-header">
+      <i class="fa fa-location-arrow"></i>
+      <span data-i18n="gotoTitle">الانتقال إلى صفحة</span>
+    </div>
+    <div class="goto-modal-body">
+      <label data-i18n="gotoLabel">أدخل رقم الصفحة (1-604):</label>
+      <input type="number" id="gotoInput" min="1" max="604" placeholder="1-604">
+      <div class="goto-range">1 - 604</div>
+    </div>
+    <div class="goto-modal-footer">
+      <button class="goto-btn goto-btn-cancel" onclick="closeGotoModal()" data-i18n="cancel">إلغاء</button>
+      <button class="goto-btn goto-btn-confirm" onclick="confirmGoto()" data-i18n="go">انتقال</button>
+    </div>
+  </div>
+</div>
 
 <!-- CONTEXT MENU -->
 <div class="ctx-menu" id="ctxMenu">
@@ -618,7 +625,6 @@ const LANG = {
     toAyah: 'إلى آية',
     brand: 'بواسطة تطبيق القرآن الكريم',
     copied: 'تم نسخ النص',
-    imgOnly: 'للقراءة فقط',
     txtMode: 'للاستماع والقراءة ومشاركة صورة أو نص',
   },
   en: {
@@ -653,7 +659,6 @@ const LANG = {
     toAyah: 'To Ayah',
     brand: 'By The Holy Quran App',
     copied: 'Text copied',
-    imgOnly: 'Read only',
     txtMode: 'Listen, read & share',
   }
 };
@@ -1453,254 +1458,159 @@ audio.addEventListener('waiting', () => {
 // MUSHAF — CDN Image-Based Two-Spread Book Flip
 // ============================================================
 const MUSHAF_TOTAL = 604;
-// Verified CDN sources (jsDelivr serves GitHub repos as a fast global CDN)
-const MUSHAF_CDNS = [
-  // QuranHub — KFGQPC Hafs Wasat, JPG, no zero-padding
-  n => `https://cdn.jsdelivr.net/gh/QuranHub/quran-pages-images@main/kfgqpc/hafs-wasat/${n}.jpg`,
-  // GovarJabbar — Quran PNG, zero-padded 3-digit
-  n => `https://cdn.jsdelivr.net/gh/GovarJabbar/Quran-PNG@master/${String(n).padStart(3,'0')}.png`,
-  // Raw GitHub fallback (slower, rate-limited)
-  n => `https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/kfgqpc/hafs-wasat/${n}.jpg`,
-];
-let mushafCdn  = null;
 let pdfPage    = 1;
-let pdfFront   = 'A';
-let pdfIsFlipping = false;
 let pdfLoaded  = false;
-
-function sleep(ms)  { return new Promise(r => setTimeout(r, ms)); }
-function pad3(n)    { return String(n).padStart(3, '0'); }
-const mobileQ  = window.matchMedia('(max-width: 900px)');
-const isMobile = () => mobileQ.matches;
-
-function pageUrl(n) { return mushafCdn(n); }
-
-function loadImg(id, pageNum) {
-  return new Promise(resolve => {
-    const el = document.getElementById(id);
-    if (!el || pageNum < 1 || pageNum > MUSHAF_TOTAL) { resolve(); return; }
-    if (el.dataset.page === String(pageNum)) { resolve(); return; }
-    el.classList.add('loading');
-    el.onload  = () => { el.dataset.page = pageNum; el.classList.remove('loading'); resolve(); };
-    el.onerror = () => { el.classList.remove('loading'); resolve(); };
-    el.src = pageUrl(pageNum);
-  });
-}
-
-async function loadSpreadTo(startPage, slot) {
-  if (isMobile()) {
-    await loadImg('img' + slot + 'R', startPage);
-  } else {
-    await Promise.all([
-      loadImg('img' + slot + 'R', startPage),
-      loadImg('img' + slot + 'L', startPage + 1),
-    ]);
-  }
-}
-
-async function detectCDN() {
-  const msg = document.querySelector('#pdfLoading span');
-  for (let i = 0; i < MUSHAF_CDNS.length; i++) {
-    const cdn = MUSHAF_CDNS[i];
-    if (msg) msg.textContent = `جاري الاتصال بالخادم ${i+1}/${MUSHAF_CDNS.length}...`;
-    try {
-      await new Promise((res, rej) => {
-        const t = setTimeout(rej, 10000);
-        const im = new Image();
-        im.onload  = () => { clearTimeout(t); res(); };
-        im.onerror = () => { clearTimeout(t); rej(); };
-        im.src = cdn(1);
-      });
-      mushafCdn = cdn;
-      return;
-    } catch(e) {}
-  }
-  throw new Error('تعذر الاتصال بخوادم الصور — تأكد من الاتصال بالإنترنت');
-}
 
 async function ensurePDFLoaded() {
   if (pdfLoaded) return;
-  document.getElementById('pdfLoading').style.display = 'flex';
-  document.getElementById('bookScene').style.display  = 'none';
-  document.getElementById('pdfHint').style.display    = 'none';
-  try {
-    await detectCDN();
-    const msg = document.querySelector('#pdfLoading span');
-    if (msg) msg.textContent = 'جاري تحميل الصفحات الأولى...';
-    pdfFront = 'A';
-    await loadSpreadTo(1, 'A');
-    const nextPreload = isMobile() ? 2 : 3;
-    loadSpreadTo(nextPreload, 'B').catch(() => {});   // pre-load next spread
-    pdfLoaded = true;
-    updatePDFInfo();
-    document.getElementById('pdfLoading').style.display = 'none';
-    document.getElementById('bookScene').style.display  = 'flex';
-    document.getElementById('pdfHint').style.display    = 'block';
-    ['btnPrev','btnNext','btnGoto'].forEach(id => document.getElementById(id).disabled = false);
-    document.getElementById('btnPrev').disabled = true;
-    initDrag();
-  } catch(e) {
-    document.getElementById('pdfLoading').innerHTML =
-      `<i class="fa fa-circle-exclamation" style="font-size:40px;color:#e55"></i>
-       <span style="text-align:center">${e.message}</span>`;
-  }
+  // Always use text mode now
+  textMode = true;
+  document.getElementById('textMushaf').classList.add('active');
+  pdfLoaded = true;
+  updatePDFInfo();
+  renderTextPage(pdfPage);
+  ['btnPrev','btnNext','btnGoto'].forEach(id => document.getElementById(id).disabled = false);
+  document.getElementById('btnPrev').disabled = true;
 }
 
 function updatePDFInfo() {
-  const p2 = Math.min(pdfPage + 1, MUSHAF_TOTAL);
-  document.getElementById('pdfPageNum').textContent    = pdfPage + '-' + p2;
+  document.getElementById('pdfPageNum').textContent    = pdfPage;
   document.getElementById('pdfTotalPages').textContent = MUSHAF_TOTAL;
   document.getElementById('btnPrev').disabled = !pdfLoaded || pdfPage <= 1;
-  document.getElementById('btnNext').disabled = !pdfLoaded || pdfPage + 1 >= MUSHAF_TOTAL;
-}
-
-async function flipSpread(newPage, dir) {
-  if (pdfIsFlipping || !pdfLoaded) return;
-  pdfIsFlipping = true;
-
-  const backSlot = pdfFront === 'A' ? 'B' : 'A';
-  const frontEl  = document.getElementById('spread' + pdfFront);
-  const backEl   = document.getElementById('spread' + backSlot);
-
-  // Ensure back spread has the right content (might already be pre-loaded)
-  const needsLoad = document.getElementById('img' + backSlot + 'R').dataset.page !== String(newPage);
-  const loadPromise = needsLoad ? loadSpreadTo(newPage, backSlot) : Promise.resolve();
-
-  // Ensure back is positioned behind front
-  backEl.classList.remove('spread-front'); backEl.classList.add('spread-back');
-  frontEl.classList.remove('spread-back'); frontEl.classList.add('spread-front');
-
-  // Wait for content to be ready, then flip
-  await loadPromise;
-
-  const origin = dir === 'n' ? 'right center' : 'left center';
-  const angle  = dir === 'n' ? '-180deg' : '180deg';
-
-  frontEl.style.transformOrigin = origin;
-  frontEl.style.transition = 'transform 0.65s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s';
-  frontEl.style.transform  = `perspective(2200px) rotateY(${angle})`;
-  frontEl.style.boxShadow  = dir === 'n' ? '30px 0 60px rgba(0,0,0,0.8)' : '-30px 0 60px rgba(0,0,0,0.8)';
-
-  await sleep(650);
-
-  // Snap old front behind (reset it)
-  frontEl.style.transition      = 'none';
-  frontEl.style.transform       = '';
-  frontEl.style.boxShadow       = '';
-  frontEl.style.transformOrigin = '';
-  frontEl.classList.remove('spread-front'); frontEl.classList.add('spread-back');
-  backEl.classList.remove('spread-back');   backEl.classList.add('spread-front');
-
-  pdfFront = backSlot;
-  pdfPage  = newPage;
-  updatePDFInfo();
-
-  // Pre-load the spread after this one into the now-back slot
-  const step    = isMobile() ? 1 : 2;
-  const preload = dir === 'n' ? newPage + step : newPage - step;
-  if (preload >= 1 && preload <= MUSHAF_TOTAL)
-    loadSpreadTo(preload, pdfFront === 'A' ? 'B' : 'A').catch(() => {});
-
-  pdfIsFlipping = false;
+  document.getElementById('btnNext').disabled = !pdfLoaded || pdfPage >= MUSHAF_TOTAL;
 }
 
 function pdfNext() {
-  const step = textMode ? 1 : (isMobile() ? 1 : 2);
-  if (pdfPage + step > MUSHAF_TOTAL) return;
-  if (textMode) {
-    pdfPage += step; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
-  } else {
-    flipSpread(pdfPage + step, 'n');
-  }
+  if (pdfPage + 1 > MUSHAF_TOTAL) return;
+  pdfPage += 1; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
 }
 function pdfPrev() {
-  const step = textMode ? 1 : (isMobile() ? 1 : 2);
-  if (pdfPage - step < 1) return;
-  if (textMode) {
-    pdfPage -= step; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
-  } else {
-    flipSpread(pdfPage - step, 'p');
-  }
+  if (pdfPage - 1 < 1) return;
+  pdfPage -= 1; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
 }
 
-function pdfZoomIn() {
-  const imgs = document.querySelectorAll('.mushaf-page img');
-  const h = parseInt(imgs[0].style.height || 680) + 60;
-  imgs.forEach(i => { i.style.height = Math.min(h, 900) + 'px'; });
-}
-function pdfZoomOut() {
-  const imgs = document.querySelectorAll('.mushaf-page img');
-  const h = parseInt(imgs[0].style.height || 680) - 60;
-  imgs.forEach(i => { i.style.height = Math.max(h, 400) + 'px'; });
-}
 async function pdfGoto() {
-  if (!pdfLoaded && !textMode) return;
-  const p = prompt(`${T('gotoPrompt')}:`, pdfPage);
-  if (!p || isNaN(p)) return;
-  let n = Math.max(1, Math.min(MUSHAF_TOTAL, parseInt(p)));
-  if (textMode) {
-    pdfPage = n; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
-  } else {
-    if (n % 2 === 0 && n > 1) n--;
-    pdfPage = n;
-    await loadSpreadTo(n, pdfFront);
-    document.getElementById('img' + pdfFront + 'R').dataset.page = n;
-    loadSpreadTo(n + 2, pdfFront === 'A' ? 'B' : 'A').catch(() => {});
-    updatePDFInfo();
+  if (!pdfLoaded) return;
+  showGotoModal();
+}
+
+function showGotoModal(){
+  const modal = document.getElementById('gotoModal');
+  const input = document.getElementById('gotoInput');
+  input.value = pdfPage;
+  modal.classList.add('show');
+  input.focus();
+  input.select();
+  // Handle Enter key
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter') confirmGoto();
+    if (e.key === 'Escape') closeGotoModal();
+  };
+  // Close on backdrop click
+  modal.onclick = (e) => {
+    if (e.target === modal) closeGotoModal();
+  };
+}
+
+function closeGotoModal(){
+  document.getElementById('gotoModal').classList.remove('show');
+}
+
+function confirmGoto(){
+  const input = document.getElementById('gotoInput');
+  const p = input.value;
+  if (!p || isNaN(p)) {
+    closeGotoModal();
+    return;
   }
+  let n = Math.max(1, Math.min(MUSHAF_TOTAL, parseInt(p)));
+  pdfPage = n;
+  updatePDFInfo();
+  renderTextPage(pdfPage).then(checkReturnBtn);
+  closeGotoModal();
 }
 function downloadPDF() {
   window.open('https://qurancomplex.gov.sa/quran/mushaf/', '_blank');
 }
 
+let isStandaloneFs = false;
 function toggleFullscreen() {
   const el = document.getElementById('page-pdf').querySelector('.pdf-wrap');
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+  
+  // Check if iOS Safari (no native fullscreen support)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isIOSSafari = isIOS && !navigator.standalone && !window.navigator.fullscreenEnabled;
+  
+  if (isIOSSafari) {
+    // Use standalone fallback for iOS Safari
+    isStandaloneFs = !isStandaloneFs;
+    if (isStandaloneFs) {
+      el.classList.add('standalone-fs');
+      document.body.style.overflow = 'hidden';
+      // Scroll to top of page-pdf
+      document.getElementById('page-pdf').scrollIntoView({behavior:'smooth'});
+    } else {
+      el.classList.remove('standalone-fs');
+      document.body.style.overflow = '';
+    }
+    updateFsIcon();
+    return;
+  }
+  
+  // Standard fullscreen API
   if (!isFs) {
-    (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen).call(el);
+    try {
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    } catch(e) {
+      // Fallback to standalone mode if fullscreen fails
+      isStandaloneFs = !isStandaloneFs;
+      el.classList.toggle('standalone-fs', isStandaloneFs);
+      document.body.style.overflow = isStandaloneFs ? 'hidden' : '';
+      updateFsIcon();
+    }
   } else {
-    (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen).call(document);
+    try {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+      else if (document.msExitFullscreen) document.msExitFullscreen();
+    } catch(e) {}
   }
 }
 
-function onFsChange() {
-  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+function updateFsIcon() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) || isStandaloneFs;
   const icon = 'fa ' + (isFs ? 'fa-compress' : 'fa-expand');
-  document.getElementById('fsIcon').className    = icon;
   document.getElementById('fsIconBar').className = icon;
-  document.getElementById('fsFab').title = isFs ? 'إنهاء ملء الشاشة' : 'ملء الشاشة';
+}
+
+function onFsChange() {
+  updateFsIcon();
+  // Reset standalone mode if native fullscreen is active
+  if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
+    isStandaloneFs = false;
+    const el = document.getElementById('page-pdf').querySelector('.pdf-wrap');
+    el.classList.remove('standalone-fs');
+    document.body.style.overflow = '';
+  }
 }
 document.addEventListener('fullscreenchange',       onFsChange);
 document.addEventListener('webkitfullscreenchange', onFsChange);
 document.addEventListener('mozfullscreenchange',    onFsChange);
-function onPdfWheel(e) {
-  e.preventDefault();
-  if (e.deltaY > 0) pdfNext(); else pdfPrev();
-}
-
-function initDrag() {
-  const scene = document.getElementById('bookScene');
-  let startX = 0, delta = 0, dragging = false;
-  const fe = () => document.getElementById('spread' + pdfFront);
-  const tilt = d => {
-    const el = fe(); if (!el) return;
-    el.style.transition      = 'none';
-    el.style.transformOrigin = d < 0 ? 'right center' : 'left center';
-    el.style.transform       = `perspective(2200px) rotateY(${d * 0.025}deg)`;
-  };
-  const reset = () => {
-    const el = fe(); if (!el) return;
-    el.style.transition = 'transform 0.2s ease-out';
-    el.style.transform = ''; el.style.transformOrigin = '';
-  };
-  scene.addEventListener('mousedown', e => { dragging=true; startX=e.clientX; delta=0; e.preventDefault(); });
-  document.addEventListener('mousemove', e => { if (!dragging || pdfIsFlipping) return; delta = e.clientX - startX; tilt(delta); });
-  document.addEventListener('mouseup',   () => { if (!dragging) return; dragging=false; reset(); if (delta>80) pdfNext(); else if (delta<-80) pdfPrev(); delta=0; });
-  scene.addEventListener('touchstart', e => { startX=e.touches[0].clientX; delta=0; }, {passive:true});
-  scene.addEventListener('touchmove',  e => { if (pdfIsFlipping) return; delta=e.touches[0].clientX-startX; tilt(delta); }, {passive:true});
-  scene.addEventListener('touchend',   () => { reset(); if (delta>80) pdfNext(); else if (delta<-80) pdfPrev(); delta=0; });
-}
-
+// Handle ESC key for standalone mode
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isStandaloneFs) {
+    isStandaloneFs = false;
+    const el = document.getElementById('page-pdf').querySelector('.pdf-wrap');
+    el.classList.remove('standalone-fs');
+    document.body.style.overflow = '';
+    updateFsIcon();
+  }
+});
 document.addEventListener('keydown', e => {
   if (document.getElementById('page-pdf').classList.contains('active')) {
     if (e.key === 'ArrowLeft')       pdfNext();
@@ -1865,20 +1775,12 @@ function toAr(n){return String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d])}
 
 // VIEW TOGGLE
 function setView(mode){
-  textMode = mode === 'txt';
-  document.getElementById('vtImg').classList.toggle('active',!textMode);
-  document.getElementById('vtTxt').classList.toggle('active',textMode);
-  const scene = document.getElementById('bookScene');
+  // Always use text mode now
+  textMode = true;
   const txt = document.getElementById('textMushaf');
-  const hint = document.getElementById('pdfHint');
-  if(textMode){
-    scene.style.display='none'; txt.classList.add('active'); hint.style.display='none';
-    renderTextPage(pdfPage);
-  } else {
-    txt.classList.remove('active');
-    if(pdfLoaded){scene.style.display='flex'; hint.style.display='block';}
-  }
-  localStorage.setItem('q_view', mode);
+  txt.classList.add('active');
+  renderTextPage(pdfPage);
+  localStorage.setItem('q_view', 'txt');
 }
 
 // FETCH & RENDER TEXT PAGE
@@ -1960,15 +1862,57 @@ async function renderTextPage(p){
 
 // VERSE HANDLERS (long press + click)
 let lpTimer=null;
+let currentVerseEl=null;
 function initVerseHandlers(){
   document.querySelectorAll('.vrs').forEach(el=>{
-    el.addEventListener('touchstart',e=>{
-      lpTimer=setTimeout(()=>showCtx(e.touches[0],el),600);
+    // Clear any existing listeners to prevent duplicates
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    
+    // Touch events for mobile
+    newEl.addEventListener('touchstart',e=>{
+      currentVerseEl = newEl;
+      lpTimer = setTimeout(()=>{
+        const touch = e.touches[0] || e.changedTouches[0];
+        showCtx(touch, newEl);
+      }, 500);
     },{passive:true});
-    el.addEventListener('touchend',()=>clearTimeout(lpTimer));
-    el.addEventListener('touchmove',()=>clearTimeout(lpTimer));
-    el.addEventListener('contextmenu',e=>{e.preventDefault();showCtx(e,el);});
+    
+    newEl.addEventListener('touchend',()=>{
+      clearTimeout(lpTimer);
+      lpTimer = null;
+    });
+    
+    newEl.addEventListener('touchmove',()=>{
+      clearTimeout(lpTimer);
+      lpTimer = null;
+    });
+    
+    // Right-click for desktop
+    newEl.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      showCtx(e, newEl);
+    });
+    
+    // Click to play verse
+    newEl.addEventListener('click',e=>{
+      if(lpTimer) clearTimeout(lpTimer);
+      // Only play if context menu is not showing
+      if(!document.getElementById('ctxMenu').classList.contains('show')){
+        playVerseFromClick(newEl);
+      }
+    });
   });
+}
+
+function playVerseFromClick(el){
+  const s = +el.dataset.s;
+  const a = +el.dataset.a;
+  if(s && a){
+    navigateToVerse(s, a, ()=>{
+      highlightTemp(s, a);
+    });
+  }
 }
 
 // CONTEXT MENU
@@ -1977,8 +1921,28 @@ function showCtx(e,el){
   ctxVerse={s:+el.dataset.s,a:+el.dataset.a,n:+el.dataset.n,sn:el.dataset.sn,txt:el.textContent};
   const isFav=favorites.some(f=>f.surah===ctxVerse.s&&f.ayah===ctxVerse.a);
   document.getElementById('ctxFav').innerHTML=`<i class="fa fa-heart${isFav?' ':'-regular '}"></i> <span>${isFav?T('removeFav'):T('addFav')}</span>`;
-  const x=e.clientX||e.pageX, y=e.clientY||e.pageY;
-  menu.style.left=Math.min(x,window.innerWidth-220)+'px';
+  
+  // Get coordinates from touch or mouse event
+  let x, y;
+  if(e.touches && e.touches[0]){
+    x = e.touches[0].clientX;
+    y = e.touches[0].clientY;
+  } else if(e.changedTouches && e.changedTouches[0]){
+    x = e.changedTouches[0].clientX;
+    y = e.changedTouches[0].clientY;
+  } else {
+    x = e.clientX || e.pageX || window.innerWidth/2;
+    y = e.clientY || e.pageY || window.innerHeight/2;
+  }
+  
+  // For mobile, center the menu horizontally
+  const menuWidth = 220;
+  if(window.innerWidth <= 900){
+    menu.style.left = Math.max(10, Math.min(x - menuWidth/2, window.innerWidth - menuWidth - 10)) + 'px';
+  } else {
+    menu.style.left = Math.min(x, window.innerWidth - menuWidth) + 'px';
+  }
+  
   menu.style.top='auto';
   menu.style.bottom='auto';
   menu.classList.add('show');
@@ -2033,14 +1997,9 @@ function removeBookmark(i,ev){
 function goToBookmark(i){
   const bm=bookmarks[i]; if(!bm)return;
   closeBmPanel();
-  if(textMode){
-    navigateToVerse(bm.surah, bm.ayah, ()=>{
-      highlightTemp(bm.surah, bm.ayah);
-    });
-  } else {
-    pdfPage=bm.page; updatePDFInfo();
-    if(pdfLoaded){loadSpreadTo(pdfPage,pdfFront);updatePDFInfo();}
-  }
+  navigateToVerse(bm.surah, bm.ayah, ()=>{
+    highlightTemp(bm.surah, bm.ayah);
+  });
 }
 
 // FAVORITES
@@ -2756,14 +2715,12 @@ async function restoreState(){
   // Restore page
   const savedNav = localStorage.getItem('q_page');
   if(savedNav && savedNav!=='home') showPage(savedNav);
-  // Restore view mode
-  const savedView = localStorage.getItem('q_view');
-  if(savedView) setView(savedView);
+  // Always use text mode now
+  textMode = true;
   // Restore mushaf page
   const savedPdf = parseInt(localStorage.getItem('q_pdfPage'));
   if(savedPdf && savedPdf>=1 && savedPdf<=604){
-    pdfPage = savedPdf; updatePDFInfo();
-    if(textMode) renderTextPage(pdfPage);
+    pdfPage = savedPdf; updatePDFInfo(); renderTextPage(pdfPage);
   }
   // Restore reciter
   const savedRecName = localStorage.getItem('q_reciter');

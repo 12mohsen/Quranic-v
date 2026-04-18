@@ -51,13 +51,68 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .alpha-btn{padding:5px 13px;border:1px solid var(--border);background:var(--border);color:#ddeee4;border-radius:20px;cursor:pointer;font-size:13px;transition:.2s}
 .alpha-btn:hover,.alpha-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
+/* FAVORITE RECITERS DROPDOWN */
+.fav-reciters-bar{background:var(--card);border-radius:12px;padding:12px 16px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.fav-reciters-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text);user-select:none;transition:.2s}
+.fav-reciters-toggle:hover{color:var(--primary)}
+.fav-reciters-toggle i.fa-heart{font-size:16px}
+.fav-reciters-toggle i.fa-chevron-down{margin-right:auto;transition:transform .3s}
+.fav-reciters-toggle.open i.fa-chevron-down{transform:rotate(180deg)}
+.fav-count{background:#e74c3c;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;min-width:24px;text-align:center}
+.fav-count:empty,.fav-count[data-count="0"]{display:none}
+.fav-reciters-dropdown{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.fav-reciters-dropdown.open{max-height:400px;overflow-y:auto}
+.fav-reciters-list{padding-top:12px;border-top:1px solid var(--border);margin-top:12px}
+.fav-reciters-list-header{display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.fav-select-all{cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);user-select:none}
+.fav-select-all input[type="checkbox"]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary)}
+.fav-delete-selected{padding:8px 16px;border-radius:20px;border:none;background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .25s;margin-right:auto;opacity:0;pointer-events:none;box-shadow:0 3px 12px rgba(231,76,60,0.3);transform:scale(0.95)}
+.fav-delete-selected.show{opacity:1;pointer-events:auto;transform:scale(1);animation:favDeletePulse 2s ease-in-out infinite}
+@keyframes favDeletePulse{0%,100%{box-shadow:0 3px 12px rgba(231,76,60,0.3)}50%{box-shadow:0 5px 20px rgba(231,76,60,0.5)}}
+.fav-delete-selected:hover{transform:scale(1.05) translateY(-2px);box-shadow:0 6px 24px rgba(231,76,60,0.4)}
+.fav-delete-selected:active{transform:scale(0.98)}
+.fav-delete-selected .delete-count{background:rgba(255,255,255,0.25);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;min-width:22px;text-align:center}
+.fav-reciter-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:.2s;margin-bottom:6px}
+.fav-reciter-item:hover{background:var(--border)}
+.fav-reciter-item .r-checkbox{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);flex-shrink:0}
+.fav-reciter-item .r-avatar{width:40px;height:40px;font-size:16px}
+.fav-reciter-item .fav-r-info{flex:1}
+.fav-reciter-item .fav-r-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.fav-reciter-item .fav-r-rewayah{font-size:11px;color:var(--muted)}
+.fav-reciter-item .fav-r-remove{width:28px;height:28px;border-radius:50%;border:none;background:rgba(231,76,60,0.1);color:#e74c3c;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.2s}
+.fav-reciter-item .fav-r-remove:hover{background:#e74c3c;color:#fff}
+.fav-empty{text-align:center;padding:20px;color:var(--muted);font-size:13px}
+
 /* RECITERS GRID */
 .reciters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
-.reciter-card{background:var(--card);border-radius:14px;padding:20px 14px;text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:.25s;border:2px solid transparent}
+.reciter-card{background:var(--card);border-radius:14px;padding:20px 14px;text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:.25s;border:2px solid transparent;position:relative}
 .reciter-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(26,107,71,0.15);border-color:var(--primary-light)}
+/* Active/Playing reciter indicator */
+.reciter-card.active{border-color:var(--primary);background:linear-gradient(145deg,var(--card),rgba(39,160,101,0.1));box-shadow:0 0 0 2px var(--primary),0 8px 32px rgba(39,160,101,0.25)}
+.reciter-card.active .r-avatar{background:linear-gradient(135deg,var(--primary),var(--primary-light));animation:pulse-avatar 2s ease-in-out infinite}
+@keyframes pulse-avatar{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+/* Sound wave animation for active reciter */
+.r-waves{display:none;position:absolute;bottom:10px;left:50%;transform:translateX(-50%);gap:3px}
+.reciter-card.active .r-waves{display:flex}
+.r-wave{width:4px;height:12px;background:var(--primary);border-radius:2px;animation:wave 1s ease-in-out infinite}
+.r-wave:nth-child(2){animation-delay:.1s}
+.r-wave:nth-child(3){animation-delay:.2s}
+.r-wave:nth-child(4){animation-delay:.3s}
+@keyframes wave{0%,100%{height:8px}50%{height:20px}}
 .r-avatar{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,var(--primary-dark),var(--primary-light));margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;font-weight:700}
 .r-name{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:6px}
 .r-rewayah{font-size:11px;color:var(--muted);background:var(--border);padding:3px 10px;border-radius:20px;display:inline-block}
+/* Reciter listened badge */
+.r-listened{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,var(--primary),#1e8a54);color:#fff;font-size:10px;padding:3px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;font-weight:600;box-shadow:0 2px 8px rgba(39,160,101,0.3);animation:badgePulse 2s ease-in-out infinite;max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr}
+@keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.r-listened i{font-size:9px;flex-shrink:0}
+.r-listened span{max-width:60px;overflow:hidden;text-overflow:ellipsis}
+/* Reciter favorite icon */
+.r-fav{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;background:rgba(231,76,60,0.1);border:none;color:#e74c3c;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .2s;z-index:10}
+.r-fav:hover{background:rgba(231,76,60,0.2);transform:scale(1.1)}
+.r-fav.active{background:#e74c3c;color:#fff;box-shadow:0 2px 8px rgba(231,76,60,0.4);animation:favPulse 1.5s ease-in-out infinite}
+@keyframes favPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.reciter-card{padding-top:36px}
 
 /* LISTEN VIEW */
 .listen-header{background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-radius:14px;padding:22px 24px;color:#fff;display:flex;align-items:center;gap:18px;margin-bottom:22px}
@@ -197,7 +252,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
   /* Grids */
   .reciters-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   .surahs-grid{grid-template-columns:1fr 1fr;gap:8px}
-  .reciter-card{padding:14px 10px}
+  .reciter-card{padding:36px 10px 14px}
   .r-avatar{width:52px;height:52px;font-size:20px}
   /* Listen header */
   .listen-header{padding:14px;gap:12px;flex-wrap:wrap}
@@ -226,6 +281,34 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
   .nav-btn{padding:12px 10px;font-size:16px}
   .reciters-grid{grid-template-columns:1fr 1fr}
   .surahs-grid{grid-template-columns:1fr}
+  /* Active reciter mobile adjustments */
+  .reciter-card.active{box-shadow:0 0 0 2px var(--primary),0 4px 16px rgba(39,160,101,0.2)}
+  .r-waves{bottom:6px;gap:2px}
+  .r-wave{width:3px;height:8px}
+  @keyframes wave{0%,100%{height:6px}50%{height:14px}}
+  /* Listened badge mobile */
+  .r-listened{top:6px;right:6px;font-size:9px;padding:2px 5px;max-width:70%}
+  .r-listened i{font-size:8px}
+  .r-listened span{max-width:40px}
+  /* Favorite icon mobile */
+  .r-fav{top:6px;left:6px;width:22px;height:22px;font-size:11px}
+  .reciter-card{padding-top:32px}
+  /* Fav reciters dropdown mobile */
+  .fav-reciters-bar{padding:10px 12px;margin-bottom:12px}
+  .fav-reciters-toggle{font-size:13px;gap:8px}
+  .fav-reciters-toggle i.fa-heart{font-size:14px}
+  .fav-count{font-size:10px;padding:1px 6px;min-width:20px}
+  .fav-reciters-list-header{padding:6px 10px}
+  .fav-select-all{font-size:11px}
+  .fav-select-all input[type="checkbox"]{width:16px;height:16px}
+  .fav-delete-selected{padding:6px 12px;font-size:11px}
+  .fav-delete-selected .delete-count{padding:1px 6px;font-size:10px;min-width:18px}
+  .fav-reciter-item{padding:8px 10px}
+  .fav-reciter-item .r-checkbox{width:16px;height:16px}
+  .fav-reciter-item .r-avatar{width:36px;height:36px;font-size:14px}
+  .fav-reciter-item .fav-r-name{font-size:12px}
+  .fav-reciter-item .fav-r-rewayah{font-size:10px}
+  .fav-reciter-item .fav-r-remove{width:24px;height:24px;font-size:10px}
 }
 /* TEXT MUSHAF */
 .text-mushaf{background:radial-gradient(ellipse at center,#0f2218,#091510);min-height:500px;padding:30px 20px;display:none;position:relative;overflow-y:auto;max-height:80vh}
@@ -313,6 +396,22 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 /* SHARE MODAL */
 .share-modal{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .share-modal.show{display:flex}
+
+/* CONFIRM DELETE MODAL */
+.confirm-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);opacity:0;transition:opacity .3s}
+.confirm-modal.show{display:flex;opacity:1}
+.confirm-box{background:linear-gradient(145deg,#1a2a1f,#0f1a14);border-radius:20px;padding:32px 28px;text-align:center;max-width:320px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(231,76,60,0.2);transform:scale(0.9);transition:transform .3s}
+.confirm-modal.show .confirm-box{transform:scale(1)}
+.confirm-icon{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e74c3c,#c0392b);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;color:#fff;box-shadow:0 8px 24px rgba(231,76,60,0.4);animation:confirmIconPulse 1.5s ease-in-out infinite}
+@keyframes confirmIconPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.confirm-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:12px}
+.confirm-msg{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+.confirm-actions{display:flex;gap:12px;justify-content:center}
+.confirm-btn{padding:12px 24px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;min-width:100px}
+.confirm-btn.cancel{background:var(--border);color:var(--text)}
+.confirm-btn.cancel:hover{background:var(--card)}
+.confirm-btn.delete{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;box-shadow:0 4px 16px rgba(231,76,60,0.3)}
+.confirm-btn.delete:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(231,76,60,0.4)}
 .share-box{background:#14241a;border-radius:14px;width:92%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,0.7)}
 .share-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .share-hdr h3{font-size:15px;color:#fff;margin:0}
@@ -401,6 +500,27 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   <!-- HOME PAGE -->
   <div class="page active" id="page-home">
     <h2 class="sec-title" data-i18n="reciters">القراء</h2>
+    <!-- Favorite Reciters Dropdown -->
+    <div class="fav-reciters-bar" id="favRecitersBar">
+      <div class="fav-reciters-toggle" onclick="toggleFavRecitersDropdown()">
+        <i class="fa fa-heart" style="color:#e74c3c"></i>
+        <span data-i18n="favReciters">القراء المفضلين</span>
+        <span class="fav-count" id="favRecitersCount">0</span>
+        <i class="fa fa-chevron-down" id="favRecitersArrow"></i>
+      </div>
+      <div class="fav-reciters-dropdown" id="favRecitersDropdown">
+        <div class="fav-reciters-list-header" id="favRecitersHeader" style="display:none">
+          <label class="fav-select-all">
+            <input type="checkbox" id="favSelectAll" onchange="toggleSelectAllFavReciters()">
+            <span data-i18n="selectAll">تحديد الكل</span>
+          </label>
+          <button class="fav-delete-selected" id="favDeleteSelected" onclick="deleteSelectedFavReciters()">
+            <i class="fa fa-trash"></i> <span data-i18n="deleteSelected">حذف المحدد</span> <span class="delete-count" id="deleteCount">0</span>
+          </button>
+        </div>
+        <div class="fav-reciters-list" id="favRecitersList"></div>
+      </div>
+    </div>
     <div class="alpha-bar" id="alphaBar"></div>
     <div id="recitersGrid" class="reciters-grid"><div class="spinner"></div></div>
   </div>
@@ -586,6 +706,19 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   </div>
 </div>
 
+<!-- CONFIRM DELETE MODAL -->
+<div class="confirm-modal" id="confirmModal">
+  <div class="confirm-box">
+    <div class="confirm-icon"><i class="fa fa-trash-can"></i></div>
+    <h3 class="confirm-title" data-i18n="confirmDelete">تأكيد الحذف</h3>
+    <p class="confirm-msg" id="confirmMsg">هل أنت متأكد من الحذف؟</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="closeConfirmModal()" data-i18n="cancel">إلغاء</button>
+      <button class="confirm-btn delete" onclick="executeConfirmDelete()" data-i18n="delete">حذف</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // i18n - LANGUAGE SYSTEM
@@ -598,7 +731,7 @@ const LANG = {
     appName: 'القرآن <em>الكريم</em>',
     searchPlaceholder: 'ابحث عن سورة أو قارئ...',
     navHome: 'الرئيسية', navSurahs: 'قائمة السور', navMushaf: 'تصفح المصحف', navSearch: 'بحث',
-    reciters: 'القراء', surahs: 'السور', surahList: 'قائمة السور الكريمة',
+    reciters: 'القراء', favReciters: 'القراء المفضلين', surahs: 'السور', surahList: 'قائمة السور الكريمة',
     prev: 'السابق', next: 'التالي', page: 'صفحة', goTo: 'انتقال',
     bookmarks: 'الفواصل', fullscreen: 'ملء الشاشة',
     endOfPage: 'نهاية الصفحة', endOfSurah: 'نهاية السورة', continuous: 'تلاوة مستمرة',
@@ -617,6 +750,7 @@ const LANG = {
     gotoPrompt: 'أدخل رقم الصفحة (1-604)',
     bookmarkN: 'فاصل',
     all: 'الكل', noReciters: 'لا يوجد قراء', narrationHafs: 'حفص عن عاصم',
+    cancel: 'إلغاء', delete: 'حذف', confirmDelete: 'تأكيد الحذف', selectAll: 'تحديد الكل', deleteSelected: 'حذف المحدد',
     shareTitle: 'مشاركة',
     shareImage: 'مشاركة صورة',
     shareText: 'مشاركة نص',
@@ -632,7 +766,7 @@ const LANG = {
     appName: 'The Holy <em>Quran</em>',
     searchPlaceholder: 'Search surah or reciter...',
     navHome: 'Home', navSurahs: 'Surahs', navMushaf: 'Mushaf', navSearch: 'Search',
-    reciters: 'Reciters', surahs: 'Surahs', surahList: 'List of Surahs',
+    reciters: 'Reciters', favReciters: 'Favorite Reciters', surahs: 'Surahs', surahList: 'List of Surahs',
     prev: 'Previous', next: 'Next', page: 'Page', goTo: 'Go To',
     bookmarks: 'Bookmarks', fullscreen: 'Fullscreen',
     endOfPage: 'End of Page', endOfSurah: 'End of Surah', continuous: 'Continuous',
@@ -651,6 +785,7 @@ const LANG = {
     gotoPrompt: 'Enter page number (1-604)',
     bookmarkN: 'Bookmark',
     all: 'All', noReciters: 'No reciters found', narrationHafs: 'Hafs from Asim',
+    cancel: 'Cancel', delete: 'Delete', confirmDelete: 'Confirm Delete', selectAll: 'Select All', deleteSelected: 'Delete Selected',
     shareTitle: 'Share',
     shareImage: 'Share Image',
     shareText: 'Share Text',
@@ -976,6 +1111,7 @@ async function loadReciters() {
   }
   buildAlphaBar();
   renderReciters(reciters);
+  renderFavRecitersDropdown();
   updateTextReciterDisplay();
 }
 
@@ -1008,12 +1144,209 @@ function renderReciters(list) {
     grid.innerHTML = `<div class="empty"><i class="fa fa-user-slash"></i><p>${T('noReciters')}</p></div>`;
     return;
   }
-  grid.innerHTML = list.map(r => `
-    <div class="reciter-card" onclick="openReciter(${JSON.stringify(r).replace(/"/g,'&quot;')})">
-      <div class="r-avatar">${reciterName(r).charAt(0)}</div>
-      <div class="r-name">${reciterName(r)}</div>
-      <span class="r-rewayah">${r.rewayah || T('narration')}</span>
-    </div>`).join('');
+  grid.innerHTML = list.map(r => {
+    const isActive = currentReciter && currentReciter.name === r.name;
+    const activeClass = isActive ? 'active' : '';
+    const waves = isActive ? `<div class="r-waves"><div class="r-wave"></div><div class="r-wave"></div><div class="r-wave"></div><div class="r-wave"></div></div>` : '';
+    const stats = getReciterStats(r.name);
+    const hasListened = stats.count > 0;
+    const displayCount = formatListenCount(stats.count);
+    const fullCount = stats.count.toLocaleString(currentLang==='ar'?'ar':'en');
+    const listenedBadge = hasListened ? `<div class="r-listened" title="${currentLang==='ar'?'استمعت له '+fullCount+' مرة':'Listened '+fullCount+' times'}"><i class="fa fa-headphones"></i> <span>${displayCount}</span></div>` : '';
+    const isFav = favReciters.includes(r.name);
+    const favIcon = `<button class="r-fav ${isFav?'active':''}" onclick="toggleFavReciter('${r.name.replace(/'/g,"\\'")}')" title="${currentLang==='ar'?'إضافة للمفضلة':'Add to favorites'}"><i class="fa fa-heart"></i></button>`;
+    return `<div class="reciter-card ${activeClass}">
+      ${favIcon}
+      <div class="r-avatar" onclick="openReciter(${JSON.stringify(r).replace(/"/g,'&quot;')})">${reciterName(r).charAt(0)}</div>
+      <div class="r-name" onclick="openReciter(${JSON.stringify(r).replace(/"/g,'&quot;')})">${reciterName(r)}</div>
+      <span class="r-rewayah" onclick="openReciter(${JSON.stringify(r).replace(/"/g,'&quot;')})">${r.rewayah || T('narration')}</span>
+      ${listenedBadge}
+      ${waves}
+    </div>`;
+  }).join('');
+}
+
+function toggleFavReciter(name){
+  event.stopPropagation();
+  const idx = favReciters.indexOf(name);
+  if(idx >= 0) favReciters.splice(idx, 1);
+  else favReciters.push(name);
+  localStorage.setItem('q_favReciters', JSON.stringify(favReciters));
+  // Re-render to update UI
+  const currentList = filteredLetter === 'all' ? reciters : reciters.filter(x=>reciterName(x).startsWith(filteredLetter));
+  renderReciters(currentList);
+  renderFavRecitersDropdown();
+}
+
+// ============================================================
+// FAVORITE RECITERS DROPDOWN
+// ============================================================
+function toggleFavRecitersDropdown(){
+  const dropdown = document.getElementById('favRecitersDropdown');
+  const toggle = document.querySelector('.fav-reciters-toggle');
+  dropdown.classList.toggle('open');
+  toggle.classList.toggle('open');
+  if(dropdown.classList.contains('open')){
+    renderFavRecitersDropdown();
+  }
+}
+
+function closeFavRecitersDropdown(){
+  const dropdown = document.getElementById('favRecitersDropdown');
+  const toggle = document.querySelector('.fav-reciters-toggle');
+  if(dropdown) dropdown.classList.remove('open');
+  if(toggle) toggle.classList.remove('open');
+}
+
+// ============================================================
+// CONFIRM DELETE MODAL
+// ============================================================
+let confirmDeleteCallback = null;
+
+function showConfirmDelete(msg, callback){
+  const modal = document.getElementById('confirmModal');
+  const msgEl = document.getElementById('confirmMsg');
+  confirmDeleteCallback = callback;
+  if(msgEl) msgEl.textContent = msg || (currentLang==='ar'?'هل أنت متأكد من الحذف؟':'Are you sure you want to delete?');
+  if(modal){
+    modal.classList.add('show');
+    // Focus on cancel button for accessibility
+    setTimeout(()=>{
+      const cancelBtn = modal.querySelector('.confirm-btn.cancel');
+      if(cancelBtn) cancelBtn.focus();
+    },100);
+  }
+}
+
+function closeConfirmModal(){
+  const modal = document.getElementById('confirmModal');
+  if(modal) modal.classList.remove('show');
+  confirmDeleteCallback = null;
+}
+
+function executeConfirmDelete(){
+  if(confirmDeleteCallback){
+    confirmDeleteCallback();
+    confirmDeleteCallback = null;
+  }
+  closeConfirmModal();
+}
+
+// Close on backdrop click and Escape key
+document.addEventListener('click', function(e){
+  const modal = document.getElementById('confirmModal');
+  if(modal && e.target === modal){
+    closeConfirmModal();
+  }
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    closeConfirmModal();
+  }
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e){
+  const bar = document.getElementById('favRecitersBar');
+  if(bar && !bar.contains(e.target)){
+    closeFavRecitersDropdown();
+  }
+});
+
+function renderFavRecitersDropdown(){
+  const list = document.getElementById('favRecitersList');
+  const count = document.getElementById('favRecitersCount');
+  const header = document.getElementById('favRecitersHeader');
+  const selectAll = document.getElementById('favSelectAll');
+  if(!list || !count) return;
+  
+  count.textContent = favReciters.length;
+  count.style.display = favReciters.length > 0 ? 'inline-block' : 'none';
+  
+  if(header){
+    header.style.display = favReciters.length > 0 ? 'flex' : 'none';
+  }
+  if(selectAll){
+    selectAll.checked = false;
+  }
+  updateDeleteSelectedButton();
+  
+  if(favReciters.length === 0){
+    list.innerHTML = `<div class="fav-empty"><i class="fa fa-heart-broken" style="font-size:24px;color:var(--muted);margin-bottom:8px;display:block"></i>${currentLang==='ar'?'لا يوجد قراء مفضلين':'No favorite reciters'}</div>`;
+    return;
+  }
+  
+  const favList = favReciters.map(name => reciters.find(r => r.name === name)).filter(r => r);
+  list.innerHTML = favList.map((r, idx) => `
+    <div class="fav-reciter-item">
+      <input type="checkbox" class="r-checkbox" data-name="${r.name.replace(/"/g,'&quot;')}" onchange="updateDeleteSelectedButton()" onclick="event.stopPropagation()">
+      <div class="r-avatar" onclick="openReciter(${JSON.stringify(r).replace(/"/g,'&quot;')})">${reciterName(r).charAt(0)}</div>
+      <div class="fav-r-info" onclick="openReciter(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <div class="fav-r-name">${reciterName(r)}</div>
+        <div class="fav-r-rewayah">${r.rewayah || T('narration')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleSelectAllFavReciters(){
+  const selectAll = document.getElementById('favSelectAll');
+  const checkboxes = document.querySelectorAll('.fav-reciter-item .r-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = selectAll.checked;
+  });
+  updateDeleteSelectedButton();
+}
+
+function updateDeleteSelectedButton(){
+  const checkboxes = document.querySelectorAll('.fav-reciter-item .r-checkbox:checked');
+  const deleteBtn = document.getElementById('favDeleteSelected');
+  const deleteCount = document.getElementById('deleteCount');
+  const count = checkboxes.length;
+  if(deleteBtn){
+    deleteBtn.classList.toggle('show', count > 0);
+  }
+  if(deleteCount){
+    deleteCount.textContent = count;
+  }
+}
+
+function deleteSelectedFavReciters(){
+  const checkboxes = document.querySelectorAll('.fav-reciter-item .r-checkbox:checked');
+  if(checkboxes.length === 0) return;
+  
+  const namesToDelete = Array.from(checkboxes).map(cb => cb.dataset.name);
+  const msg = currentLang==='ar'?`حذف ${namesToDelete.length} قارئ من المفضلة؟`:`Remove ${namesToDelete.length} reciters from favorites?`;
+  
+  showConfirmDelete(msg, function(){
+    namesToDelete.forEach(name => {
+      const idx = favReciters.indexOf(name);
+      if(idx >= 0) favReciters.splice(idx, 1);
+    });
+    localStorage.setItem('q_favReciters', JSON.stringify(favReciters));
+    renderFavRecitersDropdown();
+    // Also update the reciters grid to remove active hearts
+    const currentList = filteredLetter === 'all' ? reciters : reciters.filter(x=>reciterName(x).startsWith(filteredLetter));
+    renderReciters(currentList);
+  });
+}
+
+function removeFavReciterFromDropdown(name){
+  event.stopPropagation();
+  const idx = favReciters.indexOf(name);
+  if(idx >= 0){
+    const r = reciters.find(rc => rc.name === name);
+    const rName = r ? reciterName(r) : name;
+    const msg = currentLang==='ar'?`حذف "${rName}" من المفضلة؟`:`Remove "${rName}" from favorites?`;
+    showConfirmDelete(msg, function(){
+      favReciters.splice(idx, 1);
+      localStorage.setItem('q_favReciters', JSON.stringify(favReciters));
+      renderFavRecitersDropdown();
+      // Also update the reciters grid to remove active heart
+      const currentList = filteredLetter === 'all' ? reciters : reciters.filter(x=>reciterName(x).startsWith(filteredLetter));
+      renderReciters(currentList);
+    });
+  }
 }
 
 // ============================================================
@@ -1022,6 +1355,9 @@ function renderReciters(list) {
 function openReciter(r) {
   currentReciter = r;
   updateTextReciterDisplay();
+  // Re-render reciters to show active indicator
+  const currentList = filteredLetter === 'all' ? reciters : reciters.filter(x=>reciterName(x).startsWith(filteredLetter));
+  renderReciters(currentList);
   document.getElementById('listenHeader').innerHTML = `
     <div class="l-avatar">${reciterName(r).charAt(0)}</div>
     <div class="l-info">
@@ -1080,6 +1416,9 @@ function selectTextReciter(name){
     }
     currentReciter=r;
     updateTextReciterDisplay();
+    // Re-render reciters to show active indicator
+    const currentList = filteredLetter === 'all' ? reciters : reciters.filter(x=>reciterName(x).startsWith(filteredLetter));
+    renderReciters(currentList);
     const d=document.getElementById('txtReciterDropdown');
     if(d) d.classList.remove('show');
     // Restart current verse with new reciter if playing
@@ -1179,8 +1518,36 @@ function audioUrl(reciter, surahId) {
   return `https://server${srv}.mp3quran.net/${reciter.folder || ''}/${num}.mp3`;
 }
 
+function recordReciterPlay(){
+  if(!currentReciter) return;
+  const key = currentReciter.name;
+  if(!reciterStats[key]){
+    reciterStats[key] = {count: 0, lastPlayed: null};
+  }
+  reciterStats[key].count++;
+  reciterStats[key].lastPlayed = new Date().toISOString();
+  localStorage.setItem('q_reciterStats', JSON.stringify(reciterStats));
+  // Re-render reciters to update the UI
+  const currentList = filteredLetter === 'all' ? reciters : reciters.filter(x=>reciterName(x).startsWith(filteredLetter));
+  renderReciters(currentList);
+}
+
+function getReciterStats(name){
+  return reciterStats[name] || {count: 0, lastPlayed: null};
+}
+
+function formatListenCount(n){
+  if(n >= 1000000000000) return (n/1000000000000).toFixed(1) + 'T'; // Trillion
+  if(n >= 1000000000) return (n/1000000000).toFixed(1) + 'B';     // Billion
+  if(n >= 1000000) return (n/1000000).toFixed(1) + 'M';           // Million
+  if(n >= 1000) return (n/1000).toFixed(1) + 'K';                 // Thousand
+  return n.toString();
+}
+
 function playSurah(id) {
   if (!currentReciter) return;
+  // Record listening
+  recordReciterPlay();
   // Clear verse mode to prevent button interference
   if(isVerseMode) endVerseMode();
   window._resumeVerse = null;
@@ -1709,6 +2076,8 @@ const BM_COLORS = ['#e74c3c','#3498db','#f39c12','#2ecc71','#9b59b6'];
 const BM_NAMES = ['فاصل ١','فاصل ٢','فاصل ٣','فاصل ٤','فاصل ٥'];
 let bookmarks = JSON.parse(localStorage.getItem('q_bm') || '[null,null,null,null,null]');
 let favorites = JSON.parse(localStorage.getItem('q_fav') || '[]');
+let reciterStats = JSON.parse(localStorage.getItem('q_reciterStats') || '{}');
+let favReciters = JSON.parse(localStorage.getItem('q_favReciters') || '[]');
 let shareData = [];
 let ctxVerse = null;
 let currentPlaySurah = 0;
@@ -1989,10 +2358,16 @@ function setBookmark(i){
 }
 function removeBookmark(i,ev){
   ev&&ev.stopPropagation();
-  bookmarks[i]=null;
-  localStorage.setItem('q_bm',JSON.stringify(bookmarks));
-  renderBmList();
-  if(textMode) renderTextPage(pdfPage);
+  const bm = bookmarks[i];
+  if(!bm) return;
+  const bmName = i < BM_NAMES.length ? BM_NAMES[i] : `${T('bookmarkN')} ${i+1}`;
+  const msg = currentLang==='ar'?`حذف "${bmName}"؟`:`Delete "${bmName}"?`;
+  showConfirmDelete(msg, function(){
+    bookmarks[i]=null;
+    localStorage.setItem('q_bm',JSON.stringify(bookmarks));
+    renderBmList();
+    if(textMode) renderTextPage(pdfPage);
+  });
 }
 function goToBookmark(i){
   const bm=bookmarks[i]; if(!bm)return;
@@ -2014,9 +2389,14 @@ function toggleFavorite(){
 }
 function removeFavorite(i,ev){
   ev&&ev.stopPropagation();
-  favorites.splice(i,1);
-  localStorage.setItem('q_fav',JSON.stringify(favorites));
-  renderFavList();
+  const f = favorites[i];
+  if(!f) return;
+  const msg = currentLang==='ar'?`حذف "${f.surahName} - آية ${f.ayah}" من المفضلة؟`:`Remove "${f.surahName} - Ayah ${f.ayah}" from favorites?`;
+  showConfirmDelete(msg, function(){
+    favorites.splice(i,1);
+    localStorage.setItem('q_fav',JSON.stringify(favorites));
+    renderFavList();
+  });
 }
 function goToFavorite(i){
   const f=favorites[i]; if(!f)return;
@@ -2104,6 +2484,8 @@ function playFromVerse(){
     const alafasy=reciters.find(r=>r.name&&r.name.includes('العفاسي'));
     if(alafasy){ currentReciter=alafasy; updateTextReciterDisplay(); }
   }
+  // Record listening
+  recordReciterPlay();
   startVersePlay(ctxVerse.s,ctxVerse.a);
 }
 function startVersePlay(surah,ayah){

@@ -2054,7 +2054,7 @@ const QURAN_API = 'https://api.alquran.cloud/v1';
 
 // ⚠️ ضع هنا رابط موقعك أو رابط التطبيق - سيظهر في المشاركات
 // ⚠️ Put your website or app link here - will appear in shares
-const APP_URL = 'https://www.appcreator24.com/app/3995050'; // ← رابط تطبيقك على appcreator24
+const APP_URL = 'https://quranic-v.netlify.app/'; // ← غيّر هذا الرابط
 
 let textMode = false;
 let pageCache = {};
@@ -3047,15 +3047,16 @@ function shareAsText(withT){
   let shareUrl = '';
   if(document.getElementById('shareBrand').checked){
     full+='\n\n'+T('brand');
-    shareUrl = APP_URL; // ← رابط منفصل للأجهزة الذكية
+    shareUrl = APP_URL; // ← رابطك المخصص
   }
   // Try native share first; if unavailable/fails, show custom share picker
   if(hasNativeShare()){
-    // استخدام url منفصل لضمان ظهور الرابط كرابط قابل للنقر على الأجهزة الذكية
-    const shareObj = shareUrl ? {text: full, url: shareUrl} : {text: full};
-    navigator.share(shareObj).catch(()=>openSharePicker(full + (shareUrl ? '\n' + shareUrl : '')));
+    // ⚠️ مهم: نستخدم text فقط ونضع الرابط في نهايته بوضوح
+    // هذا يمنع ظهور رابط الموقع الأصلي (appcreator24) ويضمن ظهور رابطك فقط
+    const shareText = shareUrl ? full + '\n\n' + shareUrl : full;
+    navigator.share({text: shareText}).catch(()=>openSharePicker(shareText));
   } else {
-    openSharePicker(full + (shareUrl ? '\n' + shareUrl : ''));
+    openSharePicker(full + (shareUrl ? '\n\n' + shareUrl : ''));
   }
 }
 

@@ -154,15 +154,51 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 /* iOS Safari fallback - standalone mode */
 .pdf-wrap.standalone-fs{position:fixed;inset:0;width:100vw;height:100vh;border-radius:0;z-index:9999}
 .pdf-wrap.standalone-fs .text-mushaf{max-height:calc(100vh - 60px)}
-/* Fullscreen toolbar improvements */
-.pdf-wrap:-webkit-full-screen .pdf-toolbar,
-.pdf-wrap:-moz-full-screen .pdf-toolbar,
-.pdf-wrap:fullscreen .pdf-toolbar,
-.pdf-wrap.standalone-fs .pdf-toolbar{padding:16px 24px;gap:12px}
-.pdf-wrap:-webkit-full-screen .text-mushaf,
-.pdf-wrap:-moz-full-screen .text-mushaf,
-.pdf-wrap:fullscreen .text-mushaf,
-.pdf-wrap.standalone-fs .text-mushaf{max-height:calc(100vh - 70px)}
+/* Fullscreen: HIDE toolbar for clean full-page experience - SEPARATE RULES for compatibility */
+.pdf-wrap.standalone-fs .pdf-toolbar{display:none!important}
+.pdf-wrap:fullscreen .pdf-toolbar{display:none!important}
+.pdf-wrap:-webkit-full-screen .pdf-toolbar{display:none!important}
+.pdf-wrap:-moz-full-screen .pdf-toolbar{display:none!important}
+/* Text mushaf takes full viewport in fullscreen */
+.pdf-wrap.standalone-fs .text-mushaf{max-height:100vh!important;height:100vh;padding:20px 14px 40px}
+.pdf-wrap:fullscreen .text-mushaf{max-height:100vh!important;height:100vh;padding:20px 14px 40px}
+.pdf-wrap:-webkit-full-screen .text-mushaf{max-height:100vh!important;height:100vh;padding:20px 14px 40px}
+.pdf-wrap:-moz-full-screen .text-mushaf{max-height:100vh!important;height:100vh;padding:20px 14px 40px}
+/* Quran text area scrollable inside fullscreen */
+.pdf-wrap.standalone-fs .quran-text,
+.pdf-wrap:fullscreen .quran-text,
+.pdf-wrap:-webkit-full-screen .quran-text{max-height:calc(100vh - 80px);overflow-y:auto;padding-bottom:60px}
+/* Floating exit fullscreen button */
+.fs-exit-btn{display:none;position:fixed;top:14px;left:14px;z-index:100001;width:44px;height:44px;border-radius:50%;background:rgba(39,160,101,0.9);border:none;color:#fff;font-size:18px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);align-items:center;justify-content:center;transition:.2s}
+.fs-exit-btn:hover{background:rgba(39,160,101,1);transform:scale(1.08)}
+.pdf-wrap.standalone-fs .fs-exit-btn{display:flex!important}
+.pdf-wrap:fullscreen .fs-exit-btn{display:flex!important}
+.pdf-wrap:-webkit-full-screen .fs-exit-btn{display:flex!important}
+.pdf-wrap:-moz-full-screen .fs-exit-btn{display:flex!important}
+/* Context menu must be on top of fullscreen content */
+.pdf-wrap.standalone-fs .ctx-menu,
+.pdf-wrap:fullscreen .ctx-menu,
+.pdf-wrap:-webkit-full-screen .ctx-menu{z-index:100002}
+.pdf-wrap.standalone-fs #overlay,
+.pdf-wrap:fullscreen #overlay,
+.pdf-wrap:-webkit-full-screen #overlay{z-index:100000}
+/* Player in fullscreen must be on top */
+.pdf-wrap.standalone-fs .player,
+.pdf-wrap:fullscreen .player,
+.pdf-wrap:-webkit-full-screen .player{z-index:100003;transition:transform .3s ease}
+/* Surah picker in fullscreen */
+.pdf-wrap.standalone-fs #playerSurahPicker,
+.pdf-wrap:fullscreen #playerSurahPicker,
+.pdf-wrap:-webkit-full-screen #playerSurahPicker{z-index:100004}
+/* When UI is hidden (tap-anywhere), hide exit button and player */
+.pdf-wrap.fs-ui-hidden .fs-exit-btn{opacity:0;pointer-events:none;transition:opacity .3s}
+.pdf-wrap.fs-ui-hidden .player{transform:translateY(100%)!important}
+.pdf-wrap.fs-ui-hidden #returnToPlayBtn{bottom:18px!important}
+.fs-exit-btn{opacity:1;transition:opacity .3s}
+/* Return-to-play button above player in fullscreen */
+.pdf-wrap.standalone-fs #returnToPlayBtn,
+.pdf-wrap:fullscreen #returnToPlayBtn,
+.pdf-wrap:-webkit-full-screen #returnToPlayBtn{position:fixed!important;bottom:calc(var(--player-h) + 18px)!important;z-index:100005!important;transition:bottom .3s}
 
 /* BOTTOM PLAYER */
 .player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);background:linear-gradient(135deg,var(--primary-dark),#112d1e);color:#fff;display:flex;align-items:center;padding:0 20px;gap:18px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.3);transform:translateY(100%);transition:transform .3s}
@@ -480,7 +516,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   <div style="display:flex;align-items:center;gap:10px">
     <div class="search-box">
       <i class="fa fa-search"></i>
-      <input type="text" id="searchInput" data-i18n-ph="searchPlaceholder" placeholder="ابحث عن سورة أو قارئ..." oninput="onSearch(this.value)">
+      <input type="text" id="searchInput" data-i18n-ph="searchPlaceholder" placeholder="ابحث عن سورة أو قارئ أو آية..." oninput="onSearchDebounced(this.value)">
     </div>
     <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:.2s;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'"><i class="fa fa-globe"></i> <span id="langLabel">EN</span></button>
   </div>
@@ -541,6 +577,8 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   <!-- PDF PAGE -->
   <div class="page" id="page-pdf">
     <div class="pdf-wrap">
+      <!-- زر خروج عائم يظهر في ملء الشاشة فقط -->
+      <button class="fs-exit-btn" onclick="toggleFullscreen()" title="خروج من ملء الشاشة"><i class="fa fa-compress"></i></button>
       <div class="pdf-toolbar">
         <button class="pdf-t-btn" id="btnPrev" onclick="pdfPrev()"><i class="fa fa-chevron-right"></i> <span data-i18n="prev">السابق</span></button>
         <div class="pdf-page-info"><span data-i18n="page">صفحة</span> <span id="pdfPageNum">1</span> / <span id="pdfTotalPages">604</span></div>
@@ -551,7 +589,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
         <button class="pdf-t-btn" id="btnFs" onclick="toggleFullscreen()"><i class="fa fa-expand" id="fsIconBar"></i> <span data-i18n="fullscreen">ملء الشاشة</span></button>
       </div>
       <!-- TEXT-BASED MUSHAF VIEW -->
-      <div class="text-mushaf" id="textMushaf">
+      <div class="text-mushaf" id="textMushaf" onclick="toggleFsUI(event)">
         <button class="text-nav tn-r" onclick="pdfPrev()"><i class="fa fa-chevron-right"></i></button>
         <button class="text-nav tn-l" onclick="pdfNext()"><i class="fa fa-chevron-left"></i></button>
         <button id="returnToPlayBtn" onclick="returnToPlay()" style="display:none;position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:var(--accent);color:#1a1a1a;border:none;border-radius:24px;padding:10px 22px;font-size:14px;font-family:'Amiri',serif;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);white-space:nowrap;animation:pulse-ring 1.2s ease-out infinite"><i class="fa fa-location-crosshairs"></i> <span data-i18n="returnToPlay">العودة للتلاوة</span></button>
@@ -685,8 +723,8 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
 </div>
 
 <!-- SHARE MODAL -->
-<div class="share-modal" id="shareModal">
-  <div class="share-box">
+<div class="share-modal" id="shareModal" onclick="if(event.target===this)closeShare()">
+  <div class="share-box" onclick="event.stopPropagation()">
     <div class="share-hdr"><h3><i class="fa fa-share-nodes"></i> <span data-i18n="shareTitle">مشاركة</span></h3><button class="share-x" onclick="closeShare()"><i class="fa fa-times"></i></button></div>
     <div class="share-info" id="shareInfo"></div>
     <!-- Verse Range Selector -->
@@ -729,7 +767,7 @@ const LANG = {
   ar: {
     title: 'القرآن الكريم - استماع وتصفح',
     appName: 'القرآن <em>الكريم</em>',
-    searchPlaceholder: 'ابحث عن سورة أو قارئ...',
+    searchPlaceholder: 'ابحث عن سورة أو قارئ أو آية...', ayahs: 'الآيات', searchingAyahs: 'جاري البحث في الآيات...',
     navHome: 'الرئيسية', navSurahs: 'قائمة السور', navMushaf: 'تصفح المصحف', navSearch: 'بحث',
     reciters: 'القراء', favReciters: 'القراء المفضلين', surahs: 'السور', surahList: 'قائمة السور الكريمة',
     prev: 'السابق', next: 'التالي', page: 'صفحة', goTo: 'انتقال',
@@ -764,7 +802,7 @@ const LANG = {
   en: {
     title: 'The Holy Quran - Listen & Browse',
     appName: 'The Holy <em>Quran</em>',
-    searchPlaceholder: 'Search surah or reciter...',
+    searchPlaceholder: 'Search surah, reciter or verse...', ayahs: 'Verses', searchingAyahs: 'Searching verses...',
     navHome: 'Home', navSurahs: 'Surahs', navMushaf: 'Mushaf', navSearch: 'Search',
     reciters: 'Reciters', favReciters: 'Favorite Reciters', surahs: 'Surahs', surahList: 'List of Surahs',
     prev: 'Previous', next: 'Next', page: 'Page', goTo: 'Go To',
@@ -1640,6 +1678,20 @@ function playPrev() {
   playSurah(currentSurahId - 1);
 }
 
+// إغلاق قائمة السور عند النقر خارجها
+let _surahPickerJustClosed = false;
+document.addEventListener('click', function(e){
+  const picker = document.getElementById('playerSurahPicker');
+  if(!picker || picker.style.display === 'none') return;
+  // لا نغلق إذا كان النقر داخل القائمة أو على زر فتحها
+  if(e.target.closest('#playerSurahPicker') || e.target.closest('#pSurahListBtn')) return;
+  picker.style.display = 'none';
+  const btn = document.getElementById('pSurahListBtn');
+  if(btn) btn.style.color = '';
+  _surahPickerJustClosed = true;
+  setTimeout(()=>{ _surahPickerJustClosed = false; }, 50);
+}, true);
+
 function togglePlayerSurahPicker(){
   const picker=document.getElementById('playerSurahPicker');
   const btn=document.getElementById('pSurahListBtn');
@@ -1827,6 +1879,9 @@ audio.addEventListener('waiting', () => {
 const MUSHAF_TOTAL = 604;
 let pdfPage    = 1;
 let pdfLoaded  = false;
+// ⚠️ علم يحدد ما إذا كان المستخدم قد تصفح يدوياً بعيداً عن صفحة القراءة
+// عند true: لا يتم تقليب الصفحات تلقائياً مع القارئ
+let userNavigatedManually = false;
 
 async function ensurePDFLoaded() {
   if (pdfLoaded) return;
@@ -1849,10 +1904,13 @@ function updatePDFInfo() {
 
 function pdfNext() {
   if (pdfPage + 1 > MUSHAF_TOTAL) return;
+  // ⚠️ تم التنقل يدوياً - إيقاف التقليب التلقائي مع القارئ
+  if(isVerseMode) userNavigatedManually = true;
   pdfPage += 1; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
 }
 function pdfPrev() {
   if (pdfPage - 1 < 1) return;
+  if(isVerseMode) userNavigatedManually = true;
   pdfPage -= 1; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
 }
 
@@ -1891,6 +1949,7 @@ function confirmGoto(){
     return;
   }
   let n = Math.max(1, Math.min(MUSHAF_TOTAL, parseInt(p)));
+  if(isVerseMode) userNavigatedManually = true;
   pdfPage = n;
   updatePDFInfo();
   renderTextPage(pdfPage).then(checkReturnBtn);
@@ -1915,11 +1974,14 @@ function toggleFullscreen() {
     if (isStandaloneFs) {
       el.classList.add('standalone-fs');
       document.body.style.overflow = 'hidden';
-      // Scroll to top of page-pdf
+      moveElementsToFullscreen(el);
+      applyFullscreenUI(el, true);
       document.getElementById('page-pdf').scrollIntoView({behavior:'smooth'});
     } else {
       el.classList.remove('standalone-fs');
       document.body.style.overflow = '';
+      restoreElementsFromFullscreen();
+      applyFullscreenUI(el, false);
     }
     updateFsIcon();
     return;
@@ -1937,6 +1999,8 @@ function toggleFullscreen() {
       isStandaloneFs = !isStandaloneFs;
       el.classList.toggle('standalone-fs', isStandaloneFs);
       document.body.style.overflow = isStandaloneFs ? 'hidden' : '';
+      if(isStandaloneFs){ moveElementsToFullscreen(el); applyFullscreenUI(el, true); }
+      else { restoreElementsFromFullscreen(); applyFullscreenUI(el, false); }
       updateFsIcon();
     }
   } else {
@@ -1955,14 +2019,79 @@ function updateFsIcon() {
   document.getElementById('fsIconBar').className = icon;
 }
 
+// تبديل إظهار/إخفاء عناصر UI (زر الخروج + المسجل) بالنقر على المحتوى في ملء الشاشة
+function toggleFsUI(e){
+  if(_surahPickerJustClosed) return; // إذا أغلقنا للتو قائمة السور، لا نُبدّل الواجهة
+  const wrapEl = document.getElementById('page-pdf').querySelector('.pdf-wrap');
+  // لا نُبدّل إذا كان النقر على آية (للسماح بالتشغيل) أو على زر أو المسجل أو قائمة السياق
+  if(e.target.closest('.vrs, .fs-exit-btn, .player, #playerSurahPicker, .ctx-menu, .text-reciter-bar, .text-reciter-dropdown, .share-modal, .sp-sheet, .goto-modal, .bm-panel, mark, button, input, a')) return;
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) || isStandaloneFs;
+  if(!isFs) return;
+  wrapEl.classList.toggle('fs-ui-hidden');
+}
+
+// يفرض إخفاء/إظهار عناصر UI في وضع ملء الشاشة (احتياط إذا CSS لم يُطبَّق)
+function applyFullscreenUI(wrapEl, entering){
+  const toolbar = wrapEl.querySelector('.pdf-toolbar');
+  const exitBtn = wrapEl.querySelector('.fs-exit-btn');
+  const textMushaf = wrapEl.querySelector('.text-mushaf');
+  if(entering){
+    if(toolbar) toolbar.style.display = 'none';
+    if(exitBtn) exitBtn.style.display = 'flex';
+    if(textMushaf){
+      textMushaf.style.maxHeight = '100vh';
+      textMushaf.style.height = '100vh';
+      textMushaf.style.paddingBottom = '40px';
+    }
+  } else {
+    if(toolbar) toolbar.style.display = '';
+    if(exitBtn) exitBtn.style.display = '';
+    if(textMushaf){
+      textMushaf.style.maxHeight = '';
+      textMushaf.style.height = '';
+      textMushaf.style.paddingBottom = '';
+    }
+  }
+}
+
+// Store original parents to restore elements after exiting fullscreen
+let _fsMovedEls = [];
+function moveElementsToFullscreen(fsContainer){
+  // Move context menu, overlay, and modals into fullscreen container
+  // so they're visible when fullscreen API hides everything outside
+  const ids = ['ctxMenu','overlay','shareModal','confirmModal','gotoModal','sharePicker','imgPreviewOverlay','player','playerSurahPicker'];
+  _fsMovedEls = [];
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.parentNode !== fsContainer){
+      _fsMovedEls.push({el, parent: el.parentNode, next: el.nextSibling});
+      fsContainer.appendChild(el);
+    }
+  });
+}
+function restoreElementsFromFullscreen(){
+  _fsMovedEls.forEach(({el, parent, next})=>{
+    if(next && next.parentNode === parent) parent.insertBefore(el, next);
+    else parent.appendChild(el);
+  });
+  _fsMovedEls = [];
+}
+
 function onFsChange() {
   updateFsIcon();
-  // Reset standalone mode if native fullscreen is active
-  if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+  const wrapEl = document.getElementById('page-pdf').querySelector('.pdf-wrap');
+  if (fsEl) {
+    // Entered native fullscreen - move menus/modals inside + hide toolbar
     isStandaloneFs = false;
-    const el = document.getElementById('page-pdf').querySelector('.pdf-wrap');
-    el.classList.remove('standalone-fs');
+    wrapEl.classList.remove('standalone-fs');
     document.body.style.overflow = '';
+    moveElementsToFullscreen(fsEl);
+    applyFullscreenUI(wrapEl, true);
+  } else {
+    // Exited fullscreen - restore elements and show toolbar
+    restoreElementsFromFullscreen();
+    applyFullscreenUI(wrapEl, false);
   }
 }
 document.addEventListener('fullscreenchange',       onFsChange);
@@ -1975,6 +2104,8 @@ document.addEventListener('keydown', (e) => {
     const el = document.getElementById('page-pdf').querySelector('.pdf-wrap');
     el.classList.remove('standalone-fs');
     document.body.style.overflow = '';
+    restoreElementsFromFullscreen();
+    applyFullscreenUI(el, false);
     updateFsIcon();
   }
 });
@@ -1998,7 +2129,14 @@ function normalizeArabic(text) {
     .replace(/ى/g, 'ي')
     .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g, ''); // Remove diacritics
 }
-function onSearch(q) {
+// Debounce timer for smooth search
+let _searchTimer = null;
+function onSearchDebounced(q){
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(()=>onSearch(q), 250);
+}
+
+async function onSearch(q) {
   q = q.trim();
   if (!q) return;
   showPage('search');
@@ -2017,6 +2155,28 @@ function onSearch(q) {
     if(en && en.toLowerCase().includes(qLower)) return true;
     return false;
   });
+
+  // ⚠️ البحث في الآيات — نحتاج تحميل بيانات القرآن محلياً
+  let ayahMatches = [];
+  const isArabicQuery = /[\u0600-\u06FF]/.test(q);
+  if(isArabicQuery && normalizedQ.length >= 2){
+    // Show loading state first
+    document.getElementById('searchResults').innerHTML = 
+      `<div class="empty"><i class="fa fa-spinner fa-spin"></i><p>${T('searchingAyahs')}</p></div>`;
+    await loadLocalQuran();
+    if(localVerses){
+      const keys = Object.keys(localVerses);
+      const MAX_RESULTS = 50;
+      for(const k of keys){
+        const v = localVerses[k];
+        if(normalizeArabic(v.text).includes(normalizedQ)){
+          const [s, a] = k.split(':').map(Number);
+          ayahMatches.push({s, a, text: v.text});
+          if(ayahMatches.length >= MAX_RESULTS) break;
+        }
+      }
+    }
+  }
 
   let html = '';
   if (surahMatches.length) {
@@ -2043,8 +2203,45 @@ function onSearch(q) {
         <i class="fa fa-headphones" style="color:var(--primary)"></i>
       </div>`).join('');
   }
+  if (ayahMatches.length) {
+    html += `<h3 style="margin:16px 0 12px;color:var(--primary)">${T('ayahs')} <span style="font-size:12px;color:var(--muted);font-weight:normal">(${ayahMatches.length})</span></h3>`;
+    // Highlight matches in ayah text (safe - won't break if regex fails)
+    let highlightRegex = null;
+    try {
+      const escaped = normalizedQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      highlightRegex = new RegExp(escaped.split('').map(c=>c+'[\u064B-\u065F\u0670\u06D6-\u06ED]*').join(''), 'g');
+    } catch(e){}
+    html += ayahMatches.map(v => {
+      const sn = surahNameById(v.s) || '';
+      let highlighted = v.text;
+      if(highlightRegex){
+        try { highlighted = v.text.replace(highlightRegex, m => `<mark style="background:#f9ca24;color:#000;padding:1px 3px;border-radius:3px">${m}</mark>`); } catch(e){}
+      }
+      return `
+      <div class="sr-item" onclick="goToAyahFromSearch(${v.s},${v.a})">
+        <div class="s-num" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-size:11px;text-align:center;line-height:1.2;padding:4px">${sn}<br><span style="font-size:13px;font-weight:bold">${v.a}</span></div>
+        <div class="s-info">
+          <div class="s-name" style="font-family:'Amiri',serif;font-size:18px;line-height:1.8;direction:rtl;text-align:right">${highlighted}</div>
+          <div class="s-meta">${sn} · ${T('ayah')} ${v.a}</div>
+        </div>
+        <i class="fa fa-arrow-left" style="color:var(--primary)"></i>
+      </div>`;
+    }).join('');
+  }
   if (!html) html = `<div class="empty"><i class="fa fa-search"></i><p>${currentLang==='en'?'No results for':'لا توجد نتائج لـ'} "${q}"</p></div>`;
   document.getElementById('searchResults').innerHTML = html;
+}
+
+// الانتقال إلى آية من نتائج البحث
+function goToAyahFromSearch(surah, ayah){
+  showPage('pdf');
+  setTimeout(()=>{
+    ensurePDFLoaded().then(()=>{
+      navigateToVerse(surah, ayah, ()=>{
+        highlightTemp(surah, ayah);
+      });
+    });
+  }, 100);
 }
 
 // ============================================================
@@ -2060,17 +2257,47 @@ let textMode = false;
 let pageCache = {};
 let localVerses = null;
 async function loadLocalQuran(){
-  if(localVerses!==null) return;
+  if(localVerses!==null && Object.keys(localVerses).length > 0) return;
   try {
     const resp=await fetch('quran-simple.sql');
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
     const sql=await resp.text();
     localVerses={};
-    const re=/\((\d+),\s*(\d+),\s*(\d+),\s*'([^']*)'\)/g;
+    // Support both single-quoted strings with possible escaped quotes, and handle multiline
+    const re=/\((\d+),\s*(\d+),\s*(\d+),\s*'((?:[^'\\]|\\.)*)'\)/g;
     let m;
     while((m=re.exec(sql))!==null){
       localVerses[m[2]+':'+m[3]]={number:+m[1],text:m[4]};
     }
-  } catch(e){ localVerses={}; }
+    console.log('Loaded Quran verses:', Object.keys(localVerses).length);
+    // Fallback to API if local parsing failed
+    if(Object.keys(localVerses).length < 6000){
+      console.warn('Local parsing incomplete, falling back to API');
+      await loadQuranFromAPI();
+    }
+  } catch(e){
+    console.error('Failed to load local Quran:', e);
+    localVerses={};
+    await loadQuranFromAPI();
+  }
+}
+// احتياطي: تحميل القرآن من API إذا فشل التحميل المحلي
+async function loadQuranFromAPI(){
+  try {
+    const resp = await fetch('https://api.alquran.cloud/v1/quran/quran-simple');
+    const data = await resp.json();
+    if(data && data.data && data.data.surahs){
+      localVerses = {};
+      data.data.surahs.forEach(s => {
+        s.ayahs.forEach(a => {
+          localVerses[s.number+':'+a.numberInSurah] = {number: a.number, text: a.text};
+        });
+      });
+      console.log('Loaded Quran from API:', Object.keys(localVerses).length);
+    }
+  } catch(e){
+    console.error('API fallback failed:', e);
+  }
 }
 let curPageAyahs = [];
 let versePlayMode = 'continuous';
@@ -2322,13 +2549,17 @@ function showCtx(e,el){
   menu.classList.add('show');
   const mh=menu.offsetHeight;
   menu.classList.remove('show');
-  const maxTop=window.innerHeight-mh-10;
-  if(y>maxTop){
-    menu.style.bottom='10px';
-    menu.style.top='auto';
+  // احتساب ارتفاع المسجل السفلي لمنع تداخل القائمة معه
+  const playerEl = document.getElementById('player');
+  const playerH = (playerEl && playerEl.classList.contains('show')) ? playerEl.offsetHeight : 0;
+  const bottomReserve = playerH + 10;
+  const maxTop = window.innerHeight - mh - bottomReserve;
+  if(y > maxTop){
+    menu.style.bottom = bottomReserve + 'px';
+    menu.style.top = 'auto';
   } else {
-    menu.style.top=Math.max(10,y)+'px';
-    menu.style.bottom='auto';
+    menu.style.top = Math.max(10, y) + 'px';
+    menu.style.bottom = 'auto';
   }
   menu.classList.add('show');
   document.getElementById('overlay').classList.add('show');
@@ -2497,6 +2728,8 @@ function startVersePlay(surah,ayah){
   isVerseMode=true;
   currentPlaySurah=surah;
   verseQueue=[];
+  // إعادة ضبط العلم: عند بدء تلاوة جديدة نتابع مع القارئ تلقائياً
+  userNavigatedManually = false;
   
   // Add Bismillah before verse 1 (except Al-Fatiha=1 and At-Tawbah=9)
   if(ayah===1 && surah!==1 && surah!==9){
@@ -2573,10 +2806,12 @@ function playCurrentVerse(){
   
   currentPlaySurah=v.s;
   
-  // Check if verse is on current page, if not navigate to next page
+  // Check if verse is on current page
   let el=document.getElementById(`v-${v.s}-${v.a}`);
-  if(!el && textMode){
-    // Verse not on current page - go to next page
+  // ⚠️ إذا كان المستخدم قد تصفح يدوياً إلى صفحة أخرى، لا نقلّب الصفحة تلقائياً
+  // بل نعرض زر "العودة للتلاوة" ليعود بنفسه إذا أراد
+  if(!el && textMode && !userNavigatedManually){
+    // الصفحة الحالية هي نفسها التي كان القارئ يقرأ فيها - نقلّب تلقائياً
     pdfPage++; updatePDFInfo();
     renderTextPage(pdfPage).then(()=>{
       const newEl=document.getElementById(`v-${v.s}-${v.a}`);
@@ -2586,8 +2821,13 @@ function playCurrentVerse(){
     return;
   }
   
-  if(el){el.classList.add('playing');el.scrollIntoView({behavior:'smooth',block:'center'});}
+  if(el){
+    el.classList.add('playing');
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+  }
   loadAndPlayVerseAudio(v);
+  // إظهار زر العودة للتلاوة إذا كانت الآية ليست على الصفحة الحالية
+  setTimeout(checkReturnBtn, 100);
 }
 
 function loadAndPlayVerseAudio(v){
@@ -2640,6 +2880,8 @@ function checkReturnBtn(){
 }
 function returnToPlay(){
   if(!isVerseMode || verseQueue.length===0) return;
+  // إعادة ضبط العلم: المستخدم عاد للتلاوة فنتابع معه تلقائياً
+  userNavigatedManually = false;
   // Skip basmala marker - find the actual playing verse
   let v=verseQueue[verseQIdx];
   if(!v) return;

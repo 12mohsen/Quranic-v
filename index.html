@@ -652,7 +652,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   </div>
 </div>
 
-<audio id="audio"></audio>
+<audio id="audio" preload="auto"></audio>
 
 <!-- OVERLAY -->
 <div class="overlay" id="overlay" onclick="closeCtx();closeBmPanel()"></div>
@@ -2463,6 +2463,17 @@ function setView(mode){
   localStorage.setItem('q_view', 'txt');
 }
 
+// تحميل مسبق للصفحات المجاورة في الخلفية لتقليل التأخير
+function prefetchAdjacentPages(currentPage){
+  // حمّل الصفحة التالية والسابقة بصمت
+  [currentPage+1, currentPage+2, currentPage-1].forEach(p => {
+    if(p >= 1 && p <= 604 && !pageCache[p]){
+      // استخدم setTimeout لمنع حجب الواجهة
+      setTimeout(()=>fetchPage(p).catch(()=>{}), 100);
+    }
+  });
+}
+
 // FETCH & RENDER TEXT PAGE
 async function fetchPage(p){
   if(pageCache[p]) return pageCache[p];
@@ -2535,6 +2546,8 @@ async function renderTextPage(p){
     el.innerHTML=html;
     document.getElementById('pgNum').textContent='صفحة '+toAr(p);
     initVerseHandlers();
+    // تحميل مسبق للصفحات المجاورة في الخلفية
+    prefetchAdjacentPages(p);
   } catch(e){
     el.innerHTML='<div class="bm-empty"><i class="fa fa-exclamation-triangle"></i> تعذر تحميل النص</div>';
   }
@@ -2948,6 +2961,29 @@ function playCurrentVerse(){
   setTimeout(checkReturnBtn, 100);
 }
 
+// عنصر صوت مخفي للتحميل المسبق للآية التالية
+let _preloadAudio = null;
+let _preloadedUrl = null;
+function preloadNextVerse(){
+  try {
+    // ابحث عن الآية التالية في القائمة
+    const nextIdx = verseQIdx + 1;
+    if(nextIdx >= verseQueue.length) return;
+    const nextV = verseQueue[nextIdx];
+    if(!nextV) return;
+    const nextUrl = verseAudioUrl(nextV.s, nextV.a);
+    if(_preloadedUrl === nextUrl) return; // لا تكرر
+    if(!_preloadAudio){
+      _preloadAudio = document.createElement('audio');
+      _preloadAudio.preload = 'auto';
+      _preloadAudio.style.display = 'none';
+    }
+    _preloadAudio.src = nextUrl;
+    _preloadAudio.load();
+    _preloadedUrl = nextUrl;
+  } catch(e){}
+}
+
 function loadAndPlayVerseAudio(v){
   const vUrl=verseAudioUrl(v.s,v.a);
   console.log('Playing verse',v.s+':'+v.a,'URL:',vUrl, v.basmala?'(Bismillah)':'');
@@ -2955,6 +2991,8 @@ function loadAndPlayVerseAudio(v){
   audio.src=vUrl;
   audio.load();
   audio.play().catch(e=>console.error('Play error:',e));
+  // تحميل مسبق للآية التالية لتشغيل فوري
+  setTimeout(preloadNextVerse, 300);
   let label;
   if(v.basmala){
     // Show the actual surah name being played (next in queue)

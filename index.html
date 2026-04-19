@@ -2129,6 +2129,12 @@ function normalizeArabic(text) {
     .replace(/ى/g, 'ي')
     .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/g, ''); // Remove diacritics
 }
+// تحويل الأرقام العربية إلى إنجليزية
+function toEnglishDigits(str){
+  return String(str)
+    .replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))  // Arabic-Indic
+    .replace(/[\u06F0-\u06F9]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48)); // Extended Arabic-Indic
+}
 // Debounce timer for smooth search
 let _searchTimer = null;
 function onSearchDebounced(q){
@@ -2140,6 +2146,55 @@ async function onSearch(q) {
   q = q.trim();
   if (!q) return;
   showPage('search');
+
+  // تحويل الأرقام العربية إلى إنجليزية لدعم كلا النمطين
+  const qEnDigits = toEnglishDigits(q);
+  // تحليل أنماط الأرقام: "2:255" أو "255" أو "سورة:آية"
+  let numericMatches = [];
+  // نمط: سورة:آية أو سورة آية (بمسافة أو : أو -)
+  const pairMatch = qEnDigits.match(/^\s*(\d+)\s*[:\-\s]\s*(\d+)\s*$/);
+  const singleMatch = qEnDigits.match(/^\s*(\d+)\s*$/);
+  // نمط: اسم السورة + رقم الآية (مثل "البقرة 255")
+  const mixedMatch = qEnDigits.match(/^(.+?)\s+(\d+)\s*$/);
+  if(pairMatch){
+    const s = +pairMatch[1], a = +pairMatch[2];
+    if(s>=1 && s<=114){
+      const surah = SURAHS[s-1];
+      if(surah && a>=1 && a<=surah.verses){
+        numericMatches.push({s, a, label: `${surahName(surah)} - ${T('ayah')} ${a}`});
+      }
+    }
+  } else if(singleMatch){
+    const n = +singleMatch[1];
+    // رقم صغير (1-114): قد يكون رقم سورة
+    if(n>=1 && n<=114){
+      const surah = SURAHS[n-1];
+      if(surah){
+        numericMatches.push({type:'surah', s:n, label: `${surahName(surah)} (${T('surah')||'سورة'} ${n})`});
+      }
+    }
+    // رقم كبير (1-6236): رقم آية عام في القرآن
+    if(n>=1 && n<=6236){
+      // ابحث في localVerses عن الآية بهذا الرقم العام
+      if(localVerses){
+        for(const k of Object.keys(localVerses)){
+          if(localVerses[k].number === n){
+            const [s,a] = k.split(':').map(Number);
+            numericMatches.push({s, a, label: `${surahNameById(s)} - ${T('ayah')} ${a} (${n})`});
+            break;
+          }
+        }
+      }
+    }
+  } else if(mixedMatch){
+    const namePart = mixedMatch[1].trim();
+    const a = +mixedMatch[2];
+    const nameNorm = normalizeArabic(namePart);
+    const surah = SURAHS.find(s=>normalizeArabic(s.name).includes(nameNorm) || (SURAH_EN[s.id-1]||'').toLowerCase().includes(namePart.toLowerCase()));
+    if(surah && a>=1 && a<=surah.verses){
+      numericMatches.push({s: surah.id, a, label: `${surahName(surah)} - ${T('ayah')} ${a}`});
+    }
+  }
 
   const normalizedQ = normalizeArabic(q);
   const qLower = q.toLowerCase();
@@ -2179,8 +2234,32 @@ async function onSearch(q) {
   }
 
   let html = '';
+  // نتائج البحث الرقمي (انتقال مباشر)
+  if (numericMatches.length) {
+    html += `<h3 style="margin:0 0 12px;color:var(--primary)"><i class="fa fa-location-arrow"></i> ${currentLang==='en'?'Quick Jump':'انتقال سريع'}</h3>`;
+    html += numericMatches.map(m => {
+      if(m.type === 'surah'){
+        return `<div class="sr-item" onclick="pickReciterForSurah(${m.s})">
+          <div class="s-num">${m.s}</div>
+          <div class="s-info">
+            <div class="s-name">${m.label}</div>
+            <div class="s-meta">${currentLang==='en'?'Open surah':'فتح السورة'}</div>
+          </div>
+          <i class="fa fa-play" style="color:var(--primary)"></i>
+        </div>`;
+      }
+      return `<div class="sr-item" onclick="goToAyahFromSearch(${m.s},${m.a})">
+        <div class="s-num" style="background:linear-gradient(135deg,var(--accent),#c99a3d);color:#1a1a1a">${m.a}</div>
+        <div class="s-info">
+          <div class="s-name">${m.label}</div>
+          <div class="s-meta">${currentLang==='en'?'Jump to verse':'الانتقال إلى الآية'}</div>
+        </div>
+        <i class="fa fa-arrow-left" style="color:var(--primary)"></i>
+      </div>`;
+    }).join('');
+  }
   if (surahMatches.length) {
-    html += `<h3 style="margin:0 0 12px;color:var(--primary)">${T('surahs')}</h3>`;
+    html += `<h3 style="margin:${numericMatches.length?'16px':'0'} 0 12px;color:var(--primary)">${T('surahs')}</h3>`;
     html += surahMatches.map(s => `
       <div class="sr-item" onclick="pickReciterForSurah(${s.id})">
         <div class="s-num">${s.id}</div>

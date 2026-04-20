@@ -418,6 +418,24 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .goto-btn-confirm{background:linear-gradient(135deg,#27a065 0%,#1e8a54 100%);color:#fff;box-shadow:0 4px 15px rgba(39,160,101,0.4)}
 .goto-btn-confirm:hover{background:linear-gradient(135deg,#2bb873 0%,#27a065 100%);transform:translateY(-2px);box-shadow:0 6px 20px rgba(39,160,101,0.5)}
 
+/* FEEDBACK MODAL */
+.fb-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.fb-modal.show{display:flex;animation:fadeIn .3s ease}
+.fb-box{background:linear-gradient(145deg,#1a2e22 0%,#15261d 100%);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(39,160,101,0.2);width:100%;max-width:400px;overflow:hidden;animation:slideUp .3s ease}
+.fb-hdr{background:linear-gradient(135deg,var(--primary-dark),#1a2e22);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(39,160,101,0.2)}
+.fb-hdr h3{margin:0;color:#fff;font-size:17px;display:flex;align-items:center;gap:10px}
+.fb-hdr button{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:.2s}
+.fb-hdr button:hover{background:rgba(255,255,255,0.1);color:#fff}
+.fb-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+.fb-body textarea{width:100%;min-height:120px;background:rgba(255,255,255,0.05);border:2px solid var(--border);border-radius:12px;padding:14px 16px;color:#fff;font-size:15px;font-family:inherit;resize:vertical;outline:none;transition:.2s;line-height:1.6}
+.fb-body textarea:focus{border-color:var(--primary);background:rgba(39,160,101,0.08)}
+.fb-body textarea::placeholder{color:rgba(255,255,255,0.3)}
+.fb-send{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#27a065 0%,#1e8a54 100%);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.fb-send:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(39,160,101,0.4)}
+.fb-send:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.fb-done{text-align:center;padding:30px 20px;color:#fff}
+.fb-done i{font-size:48px;color:var(--primary);display:block;margin-bottom:14px}
+
 /* BOOKMARK PANEL */
 .bm-panel{position:fixed;top:0;left:-320px;width:310px;height:100%;background:#111f17;z-index:300;box-shadow:4px 0 20px rgba(0,0,0,0.5);transition:left .3s;overflow-y:auto}
 .bm-panel.open{left:0}
@@ -626,6 +644,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   <!-- FOOTER -->
   <div style="text-align:center;padding:20px 10px;color:var(--muted);font-size:12px;margin-top:10px;border-top:1px solid var(--border)">
     <span data-i18n="owner">المالك: عبدالمحسن</span>
+    <br><a href="#" onclick="openFeedback();return false" style="color:var(--primary);text-decoration:none;font-size:13px;display:inline-block;margin-top:8px"><i class="fa fa-envelope"></i> <span data-i18n="contactUs">اتصل بنا</span></a>
   </div>
 
 </div>
@@ -661,6 +680,12 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
     <input type="range" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)">
   </div>
 </div>
+
+<!-- Hidden form for Netlify Forms detection -->
+<form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input name="bot-field">
+  <input name="message">
+</form>
 
 <audio id="audio" preload="auto"></audio>
 
@@ -729,6 +754,20 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
     <div class="sp-title" id="spTitle">مشاركة مع</div>
     <div class="sp-grid" id="spGrid"></div>
     <button class="sp-cancel" onclick="closeSharePicker()">إلغاء</button>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="fb-modal" id="feedbackModal" onclick="if(event.target===this)closeFeedback()">
+  <div class="fb-box" onclick="event.stopPropagation()">
+    <div class="fb-hdr">
+      <h3><i class="fa fa-comment-dots"></i> <span data-i18n="contactUs">اتصل بنا</span></h3>
+      <button onclick="closeFeedback()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="fb-body" id="fbBody">
+      <textarea id="fbText" placeholder="اكتب ملاحظتك هنا..." data-i18n-ph="fbPlaceholder" dir="auto"></textarea>
+      <button class="fb-send" id="fbSendBtn" onclick="sendFeedback()"><i class="fa fa-paper-plane"></i> <span data-i18n="fbSend">إرسال</span></button>
+    </div>
   </div>
 </div>
 
@@ -808,6 +847,13 @@ const LANG = {
     brand: 'بواسطة تطبيق القرآن الكريم',
     copied: 'تم نسخ النص',
     txtMode: 'للاستماع والقراءة ومشاركة صورة أو نص',
+    contactUs: 'اتصل بنا',
+    fbPlaceholder: 'اكتب ملاحظتك هنا...',
+    fbSend: 'إرسال',
+    fbSending: 'جاري الإرسال...',
+    fbSuccess: 'تم إرسال ملاحظتك بنجاح، شكراً لك!',
+    fbError: 'حدث خطأ، يرجى المحاولة لاحقاً',
+    fbEmpty: 'يرجى كتابة ملاحظتك أولاً',
   },
   en: {
     title: 'The Holy Quran - Listen & Browse',
@@ -843,6 +889,13 @@ const LANG = {
     brand: 'By The Holy Quran App',
     copied: 'Text copied',
     txtMode: 'Listen, read & share',
+    contactUs: 'Contact Us',
+    fbPlaceholder: 'Write your feedback here...',
+    fbSend: 'Send',
+    fbSending: 'Sending...',
+    fbSuccess: 'Your feedback has been sent successfully, thank you!',
+    fbError: 'An error occurred, please try again later',
+    fbEmpty: 'Please write your feedback first',
   }
 };
 
@@ -3343,6 +3396,56 @@ function wrapTxt(ctx,text,mw){
   for(const wd of w){const t=ln+(ln?' ':'')+wd;if(ctx.measureText(t).width>mw&&ln){lines.push(ln);ln=wd;}else ln=t;}
   if(ln)lines.push(ln);return lines;
 }
+// ============================================================
+// FEEDBACK / CONTACT US
+// ============================================================
+function openFeedback(){
+  const modal=document.getElementById('feedbackModal');
+  const body=document.getElementById('fbBody');
+  body.innerHTML=`
+    <textarea id="fbText" placeholder="${T('fbPlaceholder')}" data-i18n-ph="fbPlaceholder" dir="auto"></textarea>
+    <button class="fb-send" id="fbSendBtn" onclick="sendFeedback()"><i class="fa fa-paper-plane"></i> ${T('fbSend')}</button>`;
+  modal.classList.add('show');
+  setTimeout(()=>{const ta=document.getElementById('fbText');if(ta)ta.focus();},300);
+}
+function closeFeedback(){
+  document.getElementById('feedbackModal').classList.remove('show');
+}
+function sendFeedback(){
+  const ta=document.getElementById('fbText');
+  const text=(ta?ta.value:'').trim();
+  if(!text){showToast(T('fbEmpty'));return;}
+  const btn=document.getElementById('fbSendBtn');
+  btn.disabled=true;
+  btn.innerHTML=`<i class="fa fa-spinner fa-spin"></i> ${T('fbSending')}`;
+  // Send via Netlify Forms (reliable, no email exposed)
+  const formData=new URLSearchParams();
+  formData.append('form-name','feedback');
+  formData.append('message',text);
+  fetch('/',{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:formData.toString()
+  }).then(r=>{
+    if(r.ok){
+      document.getElementById('fbBody').innerHTML=`
+        <div class="fb-done">
+          <i class="fa fa-check-circle"></i>
+          <p>${T('fbSuccess')}</p>
+        </div>`;
+      setTimeout(closeFeedback,2500);
+    } else {
+      btn.disabled=false;
+      btn.innerHTML=`<i class="fa fa-paper-plane"></i> ${T('fbSend')}`;
+      showToast(T('fbError'));
+    }
+  }).catch(()=>{
+    btn.disabled=false;
+    btn.innerHTML=`<i class="fa fa-paper-plane"></i> ${T('fbSend')}`;
+    showToast(T('fbError'));
+  });
+}
+
 // ============================================================
 // SHARING ENGINE - WebView Compatible
 // ============================================================

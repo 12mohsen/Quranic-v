@@ -3517,12 +3517,79 @@ function openSharePicker(text){
   document.getElementById('sharePicker').classList.add('show');
 }
 function closeSharePicker(){ document.getElementById('sharePicker').classList.remove('show'); _spText=''; }
-function spWhatsApp(){ window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(_spText),'_blank'); closeSharePicker(); }
-function spTelegram(){ window.open('https://t.me/share/url?url=&text='+encodeURIComponent(_spText),'_blank'); closeSharePicker(); }
-function spTwitter(){ window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(_spText),'_blank'); closeSharePicker(); }
-function spEmail(){ window.open('mailto:?subject='+encodeURIComponent(T('surah'))+'&body='+encodeURIComponent(_spText),'_blank'); closeSharePicker(); }
-function spSMS(){ window.open('sms:?body='+encodeURIComponent(_spText),'_blank'); closeSharePicker(); }
-function spCopy(){ silentCopy(_spText); showToast(T('copied')); closeSharePicker(); }
+
+// App URL for sharing (constant)
+const APP_SHARE_URL='https://luxury-croissant-dd859e.netlify.app';
+
+// WebView-safe URL launcher: uses <a> tag click which triggers OS intent handler
+function spLaunch(url){
+  try{
+    const a=document.createElement('a');
+    a.href=url;
+    a.target='_blank';
+    a.rel='noopener noreferrer';
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{try{document.body.removeChild(a);}catch(e){}},100);
+  }catch(e){
+    try{ location.href=url; }catch(e2){}
+  }
+}
+
+// Try native app scheme first; if page is still alive after 800ms, fallback to HTTPS
+function spLaunchWithFallback(nativeUrl,webUrl){
+  let fallback=true;
+  const onVis=()=>{ if(document.hidden) fallback=false; };
+  document.addEventListener('visibilitychange',onVis,{once:true});
+  spLaunch(nativeUrl);
+  setTimeout(()=>{
+    document.removeEventListener('visibilitychange',onVis);
+    if(fallback && !document.hidden) spLaunch(webUrl);
+  },900);
+}
+
+function spWhatsApp(){
+  const txt=_spText+'\n\n'+APP_SHARE_URL;
+  // Copy as safety net, then launch
+  silentCopy(txt);
+  spLaunchWithFallback('whatsapp://send?text='+encodeURIComponent(txt),
+                       'https://api.whatsapp.com/send?text='+encodeURIComponent(txt));
+  closeSharePicker();
+}
+function spTelegram(){
+  const txt=_spText;
+  silentCopy(txt+'\n\n'+APP_SHARE_URL);
+  // Telegram web share requires a valid url parameter (not empty)
+  spLaunchWithFallback('tg://msg_url?url='+encodeURIComponent(APP_SHARE_URL)+'&text='+encodeURIComponent(txt),
+                       'https://t.me/share/url?url='+encodeURIComponent(APP_SHARE_URL)+'&text='+encodeURIComponent(txt));
+  closeSharePicker();
+}
+function spTwitter(){
+  const txt=_spText;
+  silentCopy(txt+'\n\n'+APP_SHARE_URL);
+  // Use x.com (current domain) and include URL
+  spLaunchWithFallback('twitter://post?message='+encodeURIComponent(txt+'\n'+APP_SHARE_URL),
+                       'https://x.com/intent/post?text='+encodeURIComponent(txt)+'&url='+encodeURIComponent(APP_SHARE_URL));
+  closeSharePicker();
+}
+function spEmail(){
+  const subj=currentLang==='en'?'Quran Verse':'آية قرآنية';
+  const body=_spText+'\n\n'+APP_SHARE_URL;
+  silentCopy(body);
+  spLaunch('mailto:?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body));
+  closeSharePicker();
+}
+function spSMS(){
+  const txt=_spText+'\n\n'+APP_SHARE_URL;
+  silentCopy(txt);
+  // SMS format varies: use separator '?' on iOS, '&' works after that; '&' as first separator needed on some Android
+  const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const sep=isIOS?'&':'?';
+  spLaunch('sms:'+sep+'body='+encodeURIComponent(txt));
+  closeSharePicker();
+}
+function spCopy(){ silentCopy(_spText+'\n\n'+APP_SHARE_URL); showToast(T('copied')); closeSharePicker(); }
 
 // ---- IMAGE PREVIEW + SHARE/DOWNLOAD (WebView-proof) ----
 let _ipoDataUrl=null;

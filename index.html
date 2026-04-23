@@ -3573,8 +3573,9 @@ function spTwitter(){
   silentCopy(txt);
   closeSharePicker();
   spPasteToast();
-  // Open X/Twitter compose directly
-  setTimeout(()=>spLaunchWithFallback('twitter://post','https://x.com/compose/post'),200);
+  // Try native X app schemes, then fallback to mobile web home
+  // x.com/compose/post fails in WebView; home page works
+  setTimeout(()=>spLaunchWithFallback('twitter://','https://mobile.twitter.com'),200);
 }
 
 function spCopy(){ silentCopy(_spText+'\n\n'+APP_SHARE_URL); showToast(T('copied')); closeSharePicker(); }

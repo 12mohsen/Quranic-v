@@ -1758,6 +1758,38 @@ function playSurah(id) {
 }
 
 function togglePlay() {
+  // Resume FULL-SURAH playback if we restored a bookmark on load
+  if(!audio.src && window._resumeSurah){
+    const sv = window._resumeSurah;
+    window._resumeSurah = null;
+    if(!currentReciter) return;
+    currentSurahId = sv.id;
+    // Mark the matching surah card as playing in the list
+    document.querySelectorAll('.surah-card').forEach(c => {
+      c.classList.remove('playing');
+      const ic = c.querySelector('.s-play');
+      if(ic) ic.className = 'fa fa-play s-play';
+    });
+    const card = document.getElementById('sc-' + sv.id);
+    if(card){
+      card.classList.add('playing');
+      card.querySelector('.s-play').className = 'fa fa-pause s-play';
+    }
+    document.getElementById('ppIcon').className = 'fa fa-pause';
+    document.getElementById('ppBtn').classList.add('playing');
+    // Once metadata is ready, seek to the saved time and start playing.
+    const onReady = () => {
+      audio.removeEventListener('loadedmetadata', onReady);
+      try { if(sv.time && isFinite(sv.time)) audio.currentTime = sv.time; } catch(e){}
+      audio.play().catch(e => console.log('resume play error', e));
+    };
+    audio.addEventListener('loadedmetadata', onReady);
+    setSurahAudioSrc(currentReciter, sv.id).catch(e => console.log('resume src error', e));
+    setupMediaSession(`${T('surah')} ${surahNameById(sv.id)}`, reciterName(currentReciter));
+    updateMediaState(true);
+    document.getElementById('player').classList.add('show');
+    return;
+  }
   // Resume from saved state if no audio loaded yet
   if(!audio.src && window._resumeVerse){
     const lv = window._resumeVerse;
@@ -1947,11 +1979,44 @@ function seekToVerseInSurah(surahId, verseNum) {
   audio.currentTime = Math.max(targetTime, 0);
 }
 
+// ===== Resume-on-reopen state (full-surah playback) =====
+// Persist {id, time, reciter} so the user can pick up exactly where they
+// stopped after closing the tab / app. Verse-mode has its own q_lastVerse.
+const LAST_SURAH_KEY = 'q_lastSurah';
+let _lastSurahSaveAt = 0;
+function saveLastSurahState(force){
+  if(isVerseMode) return; // verse mode handles its own persistence
+  if(!currentSurahId || !currentReciter) return;
+  if(!audio || !isFinite(audio.currentTime)) return;
+  const now = Date.now();
+  if(!force && now - _lastSurahSaveAt < 2000) return; // throttle: every 2s
+  _lastSurahSaveAt = now;
+  try {
+    localStorage.setItem(LAST_SURAH_KEY, JSON.stringify({
+      id: currentSurahId,
+      time: audio.currentTime,
+      duration: audio.duration || 0,
+      reciter: currentReciter.name,
+      at: now
+    }));
+  } catch(e){}
+}
+function clearLastSurahState(){
+  try { localStorage.removeItem(LAST_SURAH_KEY); } catch(e){}
+}
+window.addEventListener('beforeunload', ()=>{ saveLastSurahState(true); });
+window.addEventListener('pagehide',     ()=>{ saveLastSurahState(true); });
+audio.addEventListener('pause', ()=>{ saveLastSurahState(true); });
+// When a surah finishes naturally, drop the bookmark so we don't reopen
+// at the last second.
+audio.addEventListener('ended', ()=>{ clearLastSurahState(); });
+
 audio.addEventListener('timeupdate', () => {
   const pct = audio.duration ? (audio.currentTime / audio.duration * 100) : 0;
   document.getElementById('pFill').style.width = pct + '%';
   document.getElementById('pCurrent').textContent = fmtTime(audio.currentTime);
   document.getElementById('pDuration').textContent = fmtTime(audio.duration);
+  saveLastSurahState(false);
   // Track verse position for full-surah audio - robust version
   if(isVerseMode && audio.duration && verseQueue.length>0 && !hasVerseByVerse()){
     const surahData=SURAHS.find(s=>s.id===verseQueue[0].s);
@@ -3953,21 +4018,57 @@ async function restoreState(){
     if(r) currentReciter = r;
   }
   updateTextReciterDisplay();
-  // Show last verse position (ready to resume)
+  // Show last verse position (ready to resume) — verse mode has priority over
+  // full-surah resume only if it is more recent.
   const savedVerse = localStorage.getItem('q_lastVerse');
+  let verseLv = null;
   if(savedVerse){
-    try{
-      const lv = JSON.parse(savedVerse);
-      if(lv.s && lv.a){
-        const label = `${surahNameById(lv.s)} - ${T('ayah')} ${lv.a}`;
-        document.getElementById('pSurah').textContent = label;
-        document.getElementById('pReciter').textContent = currentReciter?reciterName(currentReciter):'—';
-        document.getElementById('player').classList.add('show');
-        setTimeout(checkPlayerScroll,50);
-        // Store for resume on play button press
-        window._resumeVerse = lv;
+    try { verseLv = JSON.parse(savedVerse); } catch(e){}
+  }
+  // Full-surah resume bookmark
+  let surahLv = null;
+  try {
+    const raw = localStorage.getItem(LAST_SURAH_KEY);
+    if(raw) surahLv = JSON.parse(raw);
+  } catch(e){}
+
+  // Pick whichever bookmark is newer
+  const verseAt = (verseLv && verseLv.at) || 0;
+  const surahAt = (surahLv && surahLv.at) || 0;
+
+  if(surahLv && surahLv.id && surahAt >= verseAt){
+    // === Resume full-surah playback ===
+    // If the saved reciter exists, use it; else keep current.
+    if(surahLv.reciter){
+      const r = reciters.find(rc => rc.name === surahLv.reciter);
+      if(r) currentReciter = r;
+    }
+    updateTextReciterDisplay();
+    const surah = SURAHS.find(s => s.id === surahLv.id);
+    if(surah){
+      currentSurahId = surahLv.id;
+      document.getElementById('pSurah').textContent = `${T('surah')} ${surahName(surah)}`;
+      document.getElementById('pReciter').textContent = currentReciter ? reciterName(currentReciter) : '—';
+      // Show progress where they left off
+      if(surahLv.duration > 0){
+        const pct = Math.min(100, (surahLv.time / surahLv.duration) * 100);
+        document.getElementById('pFill').style.width = pct + '%';
+        document.getElementById('pCurrent').textContent  = fmtTime(surahLv.time);
+        document.getElementById('pDuration').textContent = fmtTime(surahLv.duration);
       }
-    }catch(e){}
+      document.getElementById('player').classList.add('show');
+      setTimeout(checkPlayerScroll, 50);
+      // Stash for togglePlay to consume on first user tap
+      window._resumeSurah = surahLv;
+    }
+  } else if(verseLv && verseLv.s && verseLv.a){
+    // === Resume verse-by-verse playback ===
+    const label = `${surahNameById(verseLv.s)} - ${T('ayah')} ${verseLv.a}`;
+    document.getElementById('pSurah').textContent = label;
+    document.getElementById('pReciter').textContent = currentReciter ? reciterName(currentReciter) : '—';
+    document.getElementById('player').classList.add('show');
+    setTimeout(checkPlayerScroll, 50);
+    window._resumeVerse = verseLv;
   }
   applyLang();
 }

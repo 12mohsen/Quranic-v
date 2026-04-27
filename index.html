@@ -153,16 +153,26 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 /* DOWNLOAD BUTTON ON SURAH CARD */
 .s-dl{position:relative;width:34px;height:34px;border-radius:50%;border:none;background:var(--border);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:.2s;padding:0}
 .s-dl:hover{background:var(--primary);color:#fff;transform:scale(1.08)}
-.s-dl.downloaded{background:rgba(39,160,101,0.18);color:var(--primary)}
-.s-dl.downloaded:hover{background:#e74c3c;color:#fff}
+.s-dl.downloaded{background:linear-gradient(135deg,#27a065,#2ecc71);color:#fff;box-shadow:0 0 0 2px rgba(46,204,113,0.25)}
+.s-dl.downloaded:hover{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;box-shadow:0 0 0 2px rgba(231,76,60,0.3)}
+.s-dl.just-finished{animation:dlPulse .6s ease 2}
+@keyframes dlPulse{0%{transform:scale(1)}50%{transform:scale(1.25);box-shadow:0 0 0 6px rgba(46,204,113,0.35)}100%{transform:scale(1)}}
+/* Card-level marker so the user sees at a glance which surahs are ready offline */
+.surah-card.offline-ready{position:relative}
+.surah-card.offline-ready::before{content:'';position:absolute;top:0;right:0;bottom:0;width:3px;background:linear-gradient(180deg,#2ecc71,#27a065);border-radius:0 12px 12px 0}
+.surah-card.offline-ready .s-num{box-shadow:0 0 0 2px #2ecc71,0 0 10px rgba(46,204,113,0.3)}
 .s-dl.downloading{background:var(--card);color:var(--primary);cursor:default}
 .s-dl.downloading:hover{transform:none}
 .s-dl .dl-ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
 .s-dl .dl-ring circle{fill:none;stroke-width:3;stroke-linecap:round}
-.s-dl .dl-ring .bg{stroke:rgba(255,255,255,0.08)}
-.s-dl .dl-ring .fg{stroke:var(--primary);stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset .15s linear}
+.s-dl .dl-ring .bg{stroke:rgba(128,128,128,0.2)}
+/* circumference = 2π×15.9 ≈ 99.9 — use exact value so the ring fills left→right */
+.s-dl .dl-ring .fg{stroke:var(--primary);stroke-dasharray:99.9;stroke-dashoffset:99.9;transition:stroke-dashoffset .15s linear}
 .s-dl.downloading .dl-icon{display:none}
 .s-dl:not(.downloading) .dl-ring{display:none}
+/* percentage label shown inside button while downloading */
+.dl-pct{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:var(--primary);letter-spacing:-.3px;pointer-events:none;line-height:1}
+.s-dl.downloading .dl-pct{display:flex}
 
 /* SETTINGS MODAL */
 .set-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:center;justify-content:center;z-index:9000;padding:16px;backdrop-filter:blur(4px)}
@@ -1605,7 +1615,7 @@ function renderSurahsForReciter() {
       </div>
       <button class="s-dl" id="dl-${s.id}" onclick="event.stopPropagation();toggleSurahDownload(${s.id},this)" title="تحميل / حذف" aria-label="تحميل">
         <i class="fa fa-download dl-icon"></i>
-        <svg class="dl-ring" viewBox="0 0 36 36"><circle class="bg" cx="18" cy="18" r="15.9"/><circle class="fg" cx="18" cy="18" r="15.9"/></svg>
+        <span class="dl-pct">0%</span><svg class="dl-ring" viewBox="0 0 36 36"><circle class="bg" cx="18" cy="18" r="15.9"/><circle class="fg" cx="18" cy="18" r="15.9"/></svg>
       </button>
       <i class="fa ${currentSurahId===s.id&&currentReciter?'fa-pause':'fa-play'} s-play"></i>
     </div>`).join('');
@@ -1735,9 +1745,13 @@ function playSurah(id) {
   document.getElementById('ppBtn').classList.add('playing');
   setTimeout(checkPlayerScroll,50);
 
-  // Set src synchronously and call play() immediately — no Promise/tick delay
-  setSurahAudioSrc(currentReciter, id);
-  audio.play().catch(e => console.log('play error', e));
+  // Set src then play. setSurahAudioSrc may go async to load a blob from the
+  // downloads cache, so we chain play() in .then() — the user-gesture context
+  // is still valid because the promise was created synchronously inside the
+  // click handler.
+  setSurahAudioSrc(currentReciter, id)
+    .then(() => audio.play())
+    .catch(e => console.log('play error', e));
   setupMediaSession(`${T('surah')} ${surahName(surah)}`, reciterName(currentReciter));
   updateMediaState(true);
   document.getElementById('player').classList.add('show');
@@ -2017,7 +2031,26 @@ audio.addEventListener('error', () => {
   if(isVerseMode && verseQIdx<verseQueue.length){
     const v=verseQueue[verseQIdx];
     console.error('Audio error for verse',v.s+':'+v.a,'URL:',audio.src);
-    // Wait 1 second before trying next verse to prevent rapid skipping
+
+    // 1) Hard stop if the device is offline — no point hammering the queue,
+    //    every verse will fail and create the rapid-skip loop.
+    if(!navigator.onLine){
+      showToast('لا يوجد اتصال بالإنترنت — توقفت التلاوة. حمّل السورة للاستماع بدون نت.', 4000);
+      endVerseMode();
+      return;
+    }
+
+    // 2) Track consecutive failures. A few in a row means the source is
+    //    unreachable (server down, blocked, etc.) — stop instead of looping.
+    verseFailCount = (verseFailCount || 0) + 1;
+    if(verseFailCount >= 3){
+      showToast('تعذّر تحميل التلاوة من الخادم — توقفت التلاوة.', 4000);
+      verseFailCount = 0;
+      endVerseMode();
+      return;
+    }
+
+    // 3) Otherwise wait briefly then try the next verse (transient failure).
     setTimeout(()=>{
       verseQIdx++;
       if(verseQIdx<verseQueue.length) playCurrentVerse();
@@ -2025,8 +2058,9 @@ audio.addEventListener('error', () => {
     },1000);
   }
 });
-// عند نجاح التشغيل، أزل تسمية "غير متوفر"
+// عند نجاح التشغيل، أزل تسمية "غير متوفر" + صفّر عدّاد الفشل
 audio.addEventListener('playing', () => {
+  verseFailCount = 0;
   const pr = document.getElementById('pReciter');
   if(pr && currentReciter){
     const baseName = reciterName(currentReciter);
@@ -2034,6 +2068,15 @@ audio.addEventListener('playing', () => {
       pr.textContent = baseName;
       pr.style.color = '';
     }
+  }
+});
+
+// Auto-abort verse mode the moment the network goes offline, instead of
+// letting users sit with a frozen / skipping player.
+window.addEventListener('offline', () => {
+  if(isVerseMode){
+    showToast('انقطع الاتصال — توقفت التلاوة الآلية.', 3500);
+    endVerseMode();
   }
 });
 audio.addEventListener('stalled', () => {
@@ -2620,6 +2663,10 @@ let isVerseMode = false;
 // via the text-mode reciter dropdown, or until verse mode ends.
 let verseModeReciter = null;
 let verseModeEAFolder = null;
+// Counts consecutive verse-audio failures so we can break the rapid-skip
+// loop when the network is down. Reset on any successful playback or on a
+// fresh recitation start.
+let verseFailCount = 0;
 const BM_COLORS = ['#e74c3c','#3498db','#f39c12','#2ecc71','#9b59b6'];
 const BM_NAMES = ['فاصل ١','فاصل ٢','فاصل ٣','فاصل ٤','فاصل ٥'];
 let bookmarks = JSON.parse(localStorage.getItem('q_bm') || '[null,null,null,null,null]');
@@ -3115,6 +3162,7 @@ function startVersePlay(surah,ayah){
   // dropdown, or recitation ends.
   verseModeReciter = currentReciter;
   verseModeEAFolder = getEAFolder();
+  verseFailCount = 0; // reset failure counter for the new session
   verseQueue=[];
   // إعادة ضبط العلم: عند بدء تلاوة جديدة نتابع مع القارئ تلقائياً
   userNavigatedManually = false;
@@ -3984,7 +4032,10 @@ async function refreshDownloadButtons(){
     btn.classList.toggle('downloaded', has);
     const icon = btn.querySelector('.dl-icon');
     if(icon) icon.className = has ? 'fa fa-check dl-icon' : 'fa fa-download dl-icon';
-    btn.title = has ? 'تم التحميل — اضغط للحذف' : 'تحميل للاستماع بدون إنترنت';
+    btn.title = has ? 'جاهزة للاستماع بدون إنترنت — اضغط للحذف' : 'تحميل للاستماع بدون إنترنت';
+    // Mark the parent card visually
+    const card = btn.closest('.surah-card');
+    if(card) card.classList.toggle('offline-ready', has);
   }
 }
 
@@ -4009,20 +4060,27 @@ async function downloadSurah(id, btn){
   const surah = SURAHS.find(s=>s.id===id);
   btn.classList.add('downloading');
   btn.disabled = true;
+  const CIRC = 99.9; // 2π×15.9, matches stroke-dasharray in CSS
   const ring = btn.querySelector('.dl-ring .fg');
-  if(ring) ring.style.strokeDashoffset = 100;
+  const pct  = btn.querySelector('.dl-pct');
+  if(ring){ ring.style.strokeDasharray = CIRC; ring.style.strokeDashoffset = CIRC; }
+  if(pct) pct.textContent = '0%';
 
   const setProgress = (frac) => {
-    if(ring) ring.style.strokeDashoffset = String(100 - Math.max(0, Math.min(1, frac)) * 100);
+    const f = Math.max(0, Math.min(1, frac));
+    // offset 0 = full ring, offset CIRC = empty ring
+    if(ring) ring.style.strokeDashoffset = String(CIRC * (1 - f));
+    if(pct)  pct.textContent = Math.round(f * 100) + '%';
   };
 
   const cache = await caches.open(DOWNLOADS_CACHE);
-  let cached = false, size = 0;
+  let cached = false, size = 0, errMsg = '';
 
   // Strategy A: CORS fetch with STREAMED cache write + progress tracking
   // - Uses ReadableStream.tee() so the file is NEVER fully held in JS memory.
   // - One branch is consumed by cache.put() (browser writes directly to disk).
-  // - Other branch only reads byte counts for the progress ring, then discards.
+  // - Other branch only reads byte counts for the progress ring + verifies
+  //   the final size matches Content-Length before marking as completed.
   try {
     const resp = await fetch(url, {mode:'cors'});
     if(!resp.ok) throw new Error('HTTP '+resp.status);
@@ -4038,18 +4096,19 @@ async function downloadSurah(id, btn){
     }
 
     // Track progress without buffering the bytes (chunks are discarded)
+    let received = 0;
+    let streamErr = null;
     const progressPromise = (async ()=>{
       const reader = forProgress.getReader();
-      let received = 0;
-      while(true){
-        const {done, value} = await reader.read();
-        if(done) break;
-        received += value.length;
-        if(total) setProgress(received/total);
-        // value goes out of scope here -> GC, nothing accumulated
-      }
+      try {
+        while(true){
+          const {done, value} = await reader.read();
+          if(done) break;
+          received += value.length;
+          if(total) setProgress(received/total);
+        }
+      } catch(e){ streamErr = e; }
       if(indetTimer) clearInterval(indetTimer);
-      size = received;
     })();
 
     // Build a streamable Response for the cache. The browser will pull from
@@ -4063,20 +4122,34 @@ async function downloadSurah(id, btn){
     });
     await cache.put(url, cacheResp);
     await progressPromise;
-    if(total) size = total;
+
+    // Verify completeness — abort and clean up partial downloads
+    if(streamErr) throw streamErr;
+    if(received === 0) throw new Error('empty-body');
+    if(total && received < total){
+      throw new Error(`incomplete: ${received}/${total} bytes`);
+    }
+    size = received;
     cached = true;
   } catch(corsErr){
-    // Strategy B: opaque no-cors fallback (no progress possible).
-    // cache.put still streams internally — no JS buffer either.
+    // Clean up any partial entry that cache.put may have committed
+    try { await cache.delete(url, {ignoreSearch:true}); } catch(e){}
+    errMsg = String(corsErr && corsErr.message || corsErr);
+    console.warn('CORS download failed:', errMsg);
+
+    // Strategy B: opaque no-cors fallback (no progress, no verification).
     try {
       let indet = 0; const indetTimer = setInterval(()=>{ indet=(indet+0.05)%1; setProgress(indet); }, 120);
       const opaque = await fetch(url, {mode:'no-cors'});
       await cache.put(url, opaque);
       clearInterval(indetTimer);
+      // Verify the cache really committed something usable
+      const check = await cache.match(url, {ignoreSearch:true});
+      if(!check) throw new Error('cache-write-failed');
       cached = true;
-      // size unknown for opaque
     } catch(err2){
-      console.warn('download failed', err2);
+      try { await cache.delete(url, {ignoreSearch:true}); } catch(e){}
+      console.warn('opaque download failed:', err2);
     }
   }
 
@@ -4087,6 +4160,12 @@ async function downloadSurah(id, btn){
     const icon = btn.querySelector('.dl-icon');
     if(icon) icon.className = 'fa fa-check dl-icon';
     setProgress(0);
+    // Mark the parent surah card with a clear "ready offline" badge
+    const card = btn.closest('.surah-card');
+    if(card) card.classList.add('offline-ready');
+    // Trigger a brief celebration pulse on the button
+    btn.classList.add('just-finished');
+    setTimeout(()=>btn.classList.remove('just-finished'), 1200);
     // Update index
     const idx = getDlIndex();
     idx[url] = {
@@ -4097,10 +4176,23 @@ async function downloadSurah(id, btn){
       date: Date.now()
     };
     saveDlIndex(idx);
-    if(typeof showToast==='function') showToast('تم تحميل السورة للاستماع بدون إنترنت');
+    const sizeMb = size ? (size/1024/1024).toFixed(1) + ' MB' : '';
+    if(typeof showToast==='function')
+      showToast(`✅ جاهزة للاستماع بدون إنترنت ${sizeMb?'· '+sizeMb:''}`, 3000);
   } else {
-    if(typeof showToast==='function') showToast('فشل التحميل — تحقق من الاتصال');
-    else alert('فشل التحميل');
+    // Make sure no half-baked entry stays in the cache or the index
+    try { await cache.delete(url, {ignoreSearch:true}); } catch(e){}
+    const idx = getDlIndex();
+    if(idx[url]){ delete idx[url]; saveDlIndex(idx); }
+    btn.classList.remove('downloaded');
+    const icon = btn.querySelector('.dl-icon');
+    if(icon) icon.className = 'fa fa-download dl-icon';
+    setProgress(0);
+    const reason = !navigator.onLine
+      ? 'لا يوجد اتصال بالإنترنت'
+      : (errMsg ? 'فشل التحميل — ' + errMsg : 'فشل التحميل — حاول مجدداً');
+    if(typeof showToast==='function') showToast(reason, 3500);
+    else alert(reason);
   }
 }
 
@@ -4147,13 +4239,42 @@ async function clearAllDownloads(){
  * Result: downloaded surahs play offline without loading the full file in memory,
  * and non-downloaded surahs stream normally on demand.
  */
-function setSurahAudioSrc(reciter, id){
+// Holds the last blob: URL we created so we can revoke it and free memory
+// as soon as the user moves to another surah.
+let _currentSurahBlobUrl = null;
+function _revokeCurrentBlob(){
+  if(_currentSurahBlobUrl){
+    try { URL.revokeObjectURL(_currentSurahBlobUrl); } catch(e){}
+    _currentSurahBlobUrl = null;
+  }
+}
+
+async function setSurahAudioSrc(reciter, id){
   const url = audioUrl(reciter, id);
-  // Aggressive buffering so playback starts as fast as possible once the user
-  // pressed play. The <audio> element will still stream via HTTP Range requests
-  // (not buffer the entire file in RAM), and for downloaded surahs the
-  // Service Worker serves bytes directly from the Cache Storage on disk.
   audio.preload = 'auto';
+  _revokeCurrentBlob();
+
+  // OFFLINE-SAFE PATH: if the surah is in our downloads cache, play it as a
+  // blob: URL. This bypasses Service Worker / network entirely — the browser
+  // treats it like a local file, so playback + seeking work 100% offline,
+  // independent of any SW update / Range-request quirks.
+  // We only do this for downloaded surahs, and we revoke the blob on switch
+  // so memory only holds the one surah currently playing.
+  if('caches' in window){
+    try {
+      const c = await caches.open(DOWNLOADS_CACHE);
+      const resp = await c.match(url, { ignoreSearch: true });
+      if(resp){
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        _currentSurahBlobUrl = blobUrl;
+        if(audio.src !== blobUrl) audio.src = blobUrl;
+        return;
+      }
+    } catch(e){ console.warn('blob playback fallback failed:', e); }
+  }
+
+  // Online / not downloaded: stream via the network (SW will cache as needed).
   if (audio.src !== url) audio.src = url;
 }
 

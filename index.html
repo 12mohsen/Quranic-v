@@ -2552,10 +2552,60 @@ async function loadQuranFromAPI(){
         });
       });
       console.log('Loaded Quran from API:', Object.keys(localVerses).length);
+      // While we have the full structure in hand, also build the per-page
+      // index so offline browsing of any mushaf page works immediately.
+      buildPageIndexFromSurahs(data.data.surahs);
     }
   } catch(e){
     console.error('API fallback failed:', e);
   }
+}
+
+// ============================================================
+// PAGE INDEX BUILDER — runs once, enables offline text-mushaf
+// ============================================================
+// Each ayah in alquran.cloud's /quran/quran-simple response carries a `page`
+// number. We group ayahs by page and store a [surahNumber, ayahNumber] array
+// in localStorage as `qp<page>` (same key used by fetchPage()'s offline path).
+function buildPageIndexFromSurahs(surahs){
+  try {
+    const pages = {}; // page -> [[s,a],...]
+    for(const s of surahs){
+      for(const a of s.ayahs){
+        const p = a.page;
+        if(!p) continue;
+        (pages[p] = pages[p] || []).push([s.number, a.numberInSurah]);
+      }
+    }
+    let saved = 0;
+    for(const p in pages){
+      try {
+        localStorage.setItem('qp'+p, JSON.stringify(pages[p]));
+        saved++;
+      } catch(qe){ /* quota — stop silently */ break; }
+    }
+    localStorage.setItem('q_page_index_built', '1');
+    console.log('Built offline page index:', saved, 'pages');
+  } catch(e){
+    console.error('buildPageIndex failed:', e);
+  }
+}
+
+// Opportunistic: run once in background when the user is online, so every
+// page is available offline (including pages the user has never visited).
+async function ensurePageIndex(){
+  if(localStorage.getItem('q_page_index_built') === '1') return;
+  // Try fetch even when offline — the Service Worker's networkFirst will
+  // serve the response from RUNTIME_CACHE if it was cached during any
+  // previous online session.
+  try {
+    const resp = await fetch('https://api.alquran.cloud/v1/quran/quran-simple');
+    if(!resp.ok) return;
+    const data = await resp.json();
+    if(data && data.data && data.data.surahs){
+      buildPageIndexFromSurahs(data.data.surahs);
+    }
+  } catch(e){ /* offline + no cache — try next launch */ }
 }
 let curPageAyahs = [];
 let versePlayMode = 'continuous';
@@ -2667,19 +2717,38 @@ function prefetchAdjacentPages(currentPage){
 async function fetchPage(p){
   if(pageCache[p]) return pageCache[p];
   await loadLocalQuran();
-  // Try offline: cached page structure + local SQL verses
-  const cs=localStorage.getItem('qp'+p);
+
+  // Helper: build page from a stored [[s,a],...] structure + localVerses
+  const buildFromStruct = (struct) => struct.map(v=>{
+    const lv=localVerses[v[0]+':'+v[1]];
+    const sd=SURAHS.find(s=>s.id===v[0]);
+    return {number:lv?lv.number:0,surah:{number:v[0],name:sd?sd.name:''},numberInSurah:v[1],text:lv?lv.text:''};
+  });
+
+  // 1) Fast offline path: page structure already in localStorage + verses loaded
+  let cs = localStorage.getItem('qp'+p);
   if(cs && localVerses && Object.keys(localVerses).length){
-    const struct=JSON.parse(cs);
-    const ayahs=struct.map(v=>{
-      const lv=localVerses[v[0]+':'+v[1]];
-      const sd=SURAHS.find(s=>s.id===v[0]);
-      return {number:lv?lv.number:0,surah:{number:v[0],name:sd?sd.name:''},numberInSurah:v[1],text:lv?lv.text:''};
-    });
+    const ayahs = buildFromStruct(JSON.parse(cs));
     pageCache[p]=ayahs;
     return ayahs;
   }
-  // Online: fetch from API, cache structure for offline
+
+  // 2) Structure missing — try to build the WHOLE page index in one shot.
+  //    Works online; also works offline if the full-Quran API response is
+  //    already in the SW cache (served by networkFirst strategy).
+  if(localVerses && Object.keys(localVerses).length){
+    try {
+      await ensurePageIndex();
+      cs = localStorage.getItem('qp'+p);
+      if(cs){
+        const ayahs = buildFromStruct(JSON.parse(cs));
+        pageCache[p]=ayahs;
+        return ayahs;
+      }
+    } catch(e){}
+  }
+
+  // 3) Online fallback: fetch just this single page from API
   try {
     const r=await fetch(`${QURAN_API}/page/${p}/quran-uthmani`);
     const d=await r.json();
@@ -2690,7 +2759,7 @@ async function fetchPage(p){
       return d.data.ayahs;
     }
   } catch(e){}
-  // Last fallback: local SQL without page mapping (show all verses sequentially)
+  // Last fallback: empty (offline + never indexed)
   return [];
 }
 async function renderTextPage(p){
@@ -3810,6 +3879,9 @@ const isWebView=(function(){
 async function restoreState(){
   await loadReciters();
   loadLocalQuran();
+  // Build the offline page index in the background so the mushaf works
+  // on airplane mode even for pages the user has never visited.
+  setTimeout(()=>{ ensurePageIndex().catch(()=>{}); }, 1500);
   initTextSwipe();
   // Hide image share in WebView
   if(isWebView){

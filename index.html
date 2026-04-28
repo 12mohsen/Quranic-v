@@ -281,8 +281,10 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .p-reciter.scrolling{animation:marquee 6s linear infinite}
 @keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
 .p-controls{display:flex;align-items:center;gap:10px}
-.p-btn{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.2s}
+.p-btn{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.2s;position:relative}
 .p-btn:hover{background:rgba(255,255,255,0.15)}
+.p-btn.active{color:var(--accent)}
+.p-btn.active::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
 .p-btn.pp{background:var(--accent);font-size:19px;width:48px;height:48px;position:relative}
 .p-btn.pp:hover{background:#e6b840;transform:scale(1.05)}
 .p-btn.pp.playing::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--accent);animation:pulse-ring 1s ease-out infinite}
@@ -726,6 +728,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
     <button class="p-btn" onclick="playPrev()" title="السابق"><i class="fa fa-backward-step"></i></button>
     <button class="p-btn pp" id="ppBtn" onclick="togglePlay()"><i class="fa fa-play" id="ppIcon"></i></button>
     <button class="p-btn" onclick="playNext()" title="التالي"><i class="fa fa-forward-step"></i></button>
+    <button class="p-btn" onclick="cycleRepeatMode()" title="وضع التكرار" id="pRepeatBtn"><i class="fa fa-arrow-right-long" id="pRepeatIcon"></i></button>
     <button class="p-btn" onclick="togglePlayerSurahPicker()" title="قائمة السور" id="pSurahListBtn"><i class="fa fa-list"></i></button>
   </div>
   <div class="p-progress">
@@ -2065,16 +2068,103 @@ audio.addEventListener('timeupdate', () => {
   }
 });
 
+// ===== Repeat / continuous-play mode =====
+// 'continue' (default): when a surah ends, advance to the next one (الفاتحة → البقرة → ...).
+// 'one'                : repeat the current surah indefinitely.
+// 'single'             : stop after the current surah ends.
+const REPEAT_MODE_KEY = 'q_repeatMode';
+let repeatMode = localStorage.getItem(REPEAT_MODE_KEY) || 'continue';
+function applyRepeatModeUI(){
+  const ic = document.getElementById('pRepeatIcon');
+  const bt = document.getElementById('pRepeatBtn');
+  if(!ic || !bt) return;
+  const cfg = {
+    continue: { cls: 'fa fa-forward', title: 'متتابع — تشغيل السور بالترتيب' },
+    one:      { cls: 'fa fa-repeat',  title: 'تكرار — إعادة السورة الحالية' },
+    single:   { cls: 'fa fa-stop',    title: 'مرة واحدة — توقف بعد هذه السورة' }
+  };
+  const c = cfg[repeatMode] || cfg.continue;
+  ic.className = c.cls;
+  bt.title = c.title;
+  bt.classList.toggle('active', repeatMode !== 'continue');
+}
+function cycleRepeatMode(){
+  repeatMode = repeatMode === 'continue' ? 'one'
+             : repeatMode === 'one'      ? 'single'
+             : 'continue';
+  try { localStorage.setItem(REPEAT_MODE_KEY, repeatMode); } catch(e){}
+  applyRepeatModeUI();
+  if(typeof showToast === 'function'){
+    const msg = repeatMode === 'continue' ? '▶ متتابع: ستُشغَّل السور بالترتيب'
+              : repeatMode === 'one'      ? '🔁 تكرار: ستُعاد السورة الحالية'
+              :                              '⏹ مرة واحدة: ستتوقف بعد هذه السورة';
+    showToast(msg, 2200);
+  }
+}
+
+// Background-safe surah advancement.
+// Unlike playSurah() which does heavy DOM work (re-rendering reciters, smooth
+// scroll, etc.), this function keeps things minimal so the browser doesn't
+// drop the media session when the screen is locked. It re-uses the same
+// <audio> element and merely swaps `src` + updates Media Session metadata.
+function advanceToNextSurah(){
+  if(!currentSurahId || !currentReciter) return false;
+  const nextId = currentSurahId + 1;
+  if(nextId < 1 || nextId > 114) return false;
+  currentSurahId = nextId;
+  const surah = SURAHS.find(s => s.id === nextId);
+  // Swap source — the SW will serve from cache if downloaded, else network.
+  setSurahAudioSrc(currentReciter, nextId);
+  // Kick playback immediately so the media session stays alive.
+  audio.play().catch(e => console.log('auto-advance play error', e));
+  // Best-effort UI updates (safe even when hidden — they just no-op visually).
+  try {
+    document.getElementById('pSurah').textContent = `${T('surah')} ${surahName(surah)}`;
+    document.getElementById('ppIcon').className = 'fa fa-pause';
+    document.getElementById('ppBtn').classList.add('playing');
+    document.querySelectorAll('.surah-card.playing').forEach(c => {
+      c.classList.remove('playing');
+      const ic = c.querySelector('.s-play'); if(ic) ic.className = 'fa fa-play s-play';
+    });
+    const newCard = document.getElementById('sc-' + nextId);
+    if(newCard){
+      newCard.classList.add('playing');
+      const ic = newCard.querySelector('.s-play'); if(ic) ic.className = 'fa fa-pause s-play';
+    }
+  } catch(e){ /* DOM may not be ready in background — safe to ignore */ }
+  setupMediaSession(`${T('surah')} ${surahName(surah)}`, reciterName(currentReciter));
+  updateMediaState(true);
+  return true;
+}
+
 audio.addEventListener('ended', () => {
   if(isVerseMode){
     // Always verse-by-verse mode: advance to next verse
     verseQIdx++;
     // Let playCurrentVerse handle queue end (for surah transition)
     playCurrentVerse();
-  } else {
+    return;
+  }
+  // === Surah mode: honor repeat preference ===
+  if(repeatMode === 'one'){
+    // Replay the same surah from the start
+    try { audio.currentTime = 0; } catch(e){}
+    audio.play().catch(()=>{});
+    updateMediaState(true);
+    return;
+  }
+  if(repeatMode === 'single'){
     document.getElementById('ppIcon').className = 'fa fa-play';
-  document.getElementById('ppBtn').classList.remove('playing');
-    playNext();
+    document.getElementById('ppBtn').classList.remove('playing');
+    updateMediaState(false);
+    return;
+  }
+  // 'continue' — auto-play next surah, even when the screen is off.
+  if(!advanceToNextSurah()){
+    // No next surah (e.g. finished An-Nas) — stop gracefully.
+    document.getElementById('ppIcon').className = 'fa fa-play';
+    document.getElementById('ppBtn').classList.remove('playing');
+    updateMediaState(false);
   }
 });
 // Track surah-mode fallback attempts so we don't loop forever
@@ -4079,6 +4169,7 @@ async function restoreState(){
     window._resumeVerse = verseLv;
   }
   applyLang();
+  applyRepeatModeUI();
 }
 restoreState();
 </script>

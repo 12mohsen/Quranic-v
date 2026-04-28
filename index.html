@@ -1745,13 +1745,11 @@ function playSurah(id) {
   document.getElementById('ppBtn').classList.add('playing');
   setTimeout(checkPlayerScroll,50);
 
-  // Set src then play. setSurahAudioSrc may go async to load a blob from the
-  // downloads cache, so we chain play() in .then() — the user-gesture context
-  // is still valid because the promise was created synchronously inside the
-  // click handler.
-  setSurahAudioSrc(currentReciter, id)
-    .then(() => audio.play())
-    .catch(e => console.log('play error', e));
+  // Set src synchronously and call play() immediately — no Promise/tick delay.
+  // The src is the network URL; if the surah is downloaded the Service Worker
+  // serves it from DOWNLOADS_CACHE as a 206 Partial Content stream.
+  setSurahAudioSrc(currentReciter, id);
+  audio.play().catch(e => console.log('play error', e));
   setupMediaSession(`${T('surah')} ${surahName(surah)}`, reciterName(currentReciter));
   updateMediaState(true);
   document.getElementById('player').classList.add('show');
@@ -1784,7 +1782,7 @@ function togglePlay() {
       audio.play().catch(e => console.log('resume play error', e));
     };
     audio.addEventListener('loadedmetadata', onReady);
-    setSurahAudioSrc(currentReciter, sv.id).catch(e => console.log('resume src error', e));
+    setSurahAudioSrc(currentReciter, sv.id);
     setupMediaSession(`${T('surah')} ${surahNameById(sv.id)}`, reciterName(currentReciter));
     updateMediaState(true);
     document.getElementById('player').classList.add('show');
@@ -2079,7 +2077,17 @@ audio.addEventListener('ended', () => {
     playNext();
   }
 });
-audio.addEventListener('error', () => {
+// Track surah-mode fallback attempts so we don't loop forever
+let _surahFallbackTried = false;
+audio.addEventListener('error', async () => {
+  // Full-surah mode: if a downloaded copy exists and the file is small enough,
+  // try the blob: fallback ONCE before giving up. This rescues cases where
+  // the SW serves a malformed 206 / opaque response.
+  if(!isVerseMode && !_surahFallbackTried && audio.dataset.surahUrl){
+    _surahFallbackTried = true;
+    const ok = await trySurahBlobFallback();
+    if(ok) return;
+  }
   // Remove playing indicator on error
   document.getElementById('ppIcon').className='fa fa-play';
   document.getElementById('ppBtn').classList.remove('playing');
@@ -4350,33 +4358,57 @@ function _revokeCurrentBlob(){
   }
 }
 
+// Threshold for blob fallback. Blob: URLs must hold the entire file in RAM,
+// which mobile browsers (esp. iOS Safari, ~50MB cap) refuse for big surahs.
+// Above this size we ALWAYS go through the Service Worker (streaming + 206).
+const BLOB_FALLBACK_MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+
 async function setSurahAudioSrc(reciter, id){
   const url = audioUrl(reciter, id);
   audio.preload = 'auto';
   _revokeCurrentBlob();
 
-  // OFFLINE-SAFE PATH: if the surah is in our downloads cache, play it as a
-  // blob: URL. This bypasses Service Worker / network entirely — the browser
-  // treats it like a local file, so playback + seeking work 100% offline,
-  // independent of any SW update / Range-request quirks.
-  // We only do this for downloaded surahs, and we revoke the blob on switch
-  // so memory only holds the one surah currently playing.
-  if('caches' in window){
-    try {
-      const c = await caches.open(DOWNLOADS_CACHE);
-      const resp = await c.match(url, { ignoreSearch: true });
-      if(resp){
-        const blob = await resp.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        _currentSurahBlobUrl = blobUrl;
-        if(audio.src !== blobUrl) audio.src = blobUrl;
-        return;
-      }
-    } catch(e){ console.warn('blob playback fallback failed:', e); }
-  }
-
-  // Online / not downloaded: stream via the network (SW will cache as needed).
+  // PRIMARY PATH: always set the network URL.
+  //   - Online: browser fetches it; SW caches opportunistically.
+  //   - Offline + downloaded: SW intercepts and serves a 206 Partial Content
+  //     response straight from DOWNLOADS_CACHE (streaming, no big RAM buffer).
+  // This is the only path that works reliably for huge surahs (Al-Baqarah
+  // ~131 MB, Al-Imran ~106 MB, An-Nisa ~85 MB) on mobile devices.
   if (audio.src !== url) audio.src = url;
+  // Remember the URL so the error handler can decide whether to retry from
+  // the downloads cache as a blob (small files only).
+  audio.dataset.surahId = String(id);
+  audio.dataset.surahUrl = url;
+  // Reset per-surah fallback flag (declared near the audio.error handler).
+  if (typeof _surahFallbackTried !== 'undefined') _surahFallbackTried = false;
+}
+
+// Try a blob: URL fallback ONLY when the file is small enough to safely fit
+// in mobile memory. Returns true if a fallback was applied.
+async function trySurahBlobFallback(){
+  if(!('caches' in window)) return false;
+  const url = audio.dataset.surahUrl;
+  if(!url) return false;
+  try {
+    const c = await caches.open(DOWNLOADS_CACHE);
+    const resp = await c.match(url, { ignoreSearch: true });
+    if(!resp) return false;
+    // Reject opaque or oversized cache entries — they would either not slice
+    // properly or blow up memory on mobile.
+    if(resp.type === 'opaque') return false;
+    const len = +resp.headers.get('content-length') || 0;
+    if(len === 0 || len > BLOB_FALLBACK_MAX_BYTES) return false;
+    const blob = await resp.blob();
+    _revokeCurrentBlob();
+    const blobUrl = URL.createObjectURL(blob);
+    _currentSurahBlobUrl = blobUrl;
+    audio.src = blobUrl;
+    audio.play().catch(()=>{});
+    return true;
+  } catch(e){
+    console.warn('surah blob fallback failed:', e);
+    return false;
+  }
 }
 
 /* ===== Settings modal ===== */

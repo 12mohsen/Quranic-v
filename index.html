@@ -384,6 +384,22 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
   .p-btn.pp{width:42px;height:42px;font-size:17px}
   .p-surah{font-size:13px}
 }
+@media(max-width:600px){
+  .p-vol{display:none}
+  .player{padding:0 10px;gap:8px}
+  .p-info{min-width:80px;max-width:110px}
+  .p-controls{gap:4px}
+  .p-progress{flex:1;min-width:70px}
+  .p-btn{font-size:17px;width:32px;height:32px}
+  .p-btn.pp{width:38px;height:38px;font-size:15px}
+  .p-surah{font-size:12px}
+  .p-reciter{font-size:10px}
+}
+@media (max-width:380px){
+  #pSurahListBtn{display:none}
+  .p-info{min-width:70px;max-width:95px}
+  .p-btn{width:30px;height:30px;font-size:16px}
+}
 @media(max-width:480px){
   .search-box{min-width:120px;padding:4px 8px}
   .search-box input{font-size:12px}
@@ -1721,8 +1737,39 @@ function formatListenCount(n){
   return n.toString();
 }
 
+// Reciters whose Server is 'everyayah:...' only ship VERSE-BY-VERSE audio
+// (no full-surah MP3 exists), e.g. Abdul Basit Mujawwad. We must play those
+// in verse mode otherwise audioUrl() builds a broken URL like
+// "https://serverevery.mp3quran.net/...".
+function isEveryAyahOnlyReciter(r){
+  if(!r) return false;
+  const srv = (r.Server || r.server || '');
+  return typeof srv === 'string' && srv.startsWith('everyayah:');
+}
+
 function playSurah(id) {
   if (!currentReciter) return;
+  // Verse-only reciters: switch to verse-by-verse playback automatically.
+  // The user picks Al-Fatiha → we play it ayah by ayah from EveryAyah.
+  if (isEveryAyahOnlyReciter(currentReciter)) {
+    if (typeof showToast === 'function') {
+      showToast('هذا القارئ متوفر آية بآية فقط — سيتم التشغيل بهذه الطريقة.', 2500);
+    }
+    recordReciterPlay();
+    currentSurahId = id;
+    // Highlight the card so the user sees their selection took effect.
+    document.querySelectorAll('.surah-card').forEach(c => {
+      c.classList.remove('playing');
+      const ic = c.querySelector('.s-play'); if(ic) ic.className = 'fa fa-play s-play';
+    });
+    const card = document.getElementById('sc-' + id);
+    if(card){
+      card.classList.add('playing');
+      card.querySelector('.s-play').className = 'fa fa-pause s-play';
+    }
+    startVersePlay(id, 1);
+    return;
+  }
   // Record listening
   recordReciterPlay();
   // Clear verse mode to prevent button interference

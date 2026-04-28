@@ -2102,6 +2102,46 @@ function cycleRepeatMode(){
   }
 }
 
+// ===== Preload next surah so screen-off transitions are gap-less =====
+// Mobile browsers revoke the media/AudioFocus session if the gap between two
+// playbacks exceeds ~1–2 seconds. If we only set `audio.src = nextUrl` on
+// `ended`, the fresh HTTP fetch / SW lookup often takes longer than that
+// when the screen is off (JS is throttled). So we warm up the NEXT surah
+// in a hidden <audio> element while the current one is still playing.
+// Browsers will buffer it to disk/memory → when we finally point `audio.src`
+// at it, playback starts near-instantly.
+const audioPrime = new Audio();
+audioPrime.preload = 'auto';
+audioPrime.muted = true; // never plays — only buffers
+let _primedSurahId = null;
+
+function primeNextSurah(){
+  if(!currentReciter || !currentSurahId) return;
+  if(repeatMode !== 'continue') return; // only needed for auto-advance
+  const nextId = currentSurahId + 1;
+  if(nextId < 1 || nextId > 114) return;
+  if(_primedSurahId === nextId) return; // already primed
+  try {
+    const url = audioUrl(currentReciter, nextId);
+    audioPrime.src = url;
+    audioPrime.load();
+    _primedSurahId = nextId;
+  } catch(e){ /* ignore */ }
+}
+
+// Kick off preload once we pass 40% of the current surah. We avoid priming
+// too early so users who switch surahs frequently don't burn bandwidth.
+audio.addEventListener('timeupdate', () => {
+  if(isVerseMode) return;
+  if(!audio.duration || !isFinite(audio.duration)) return;
+  if(audio.currentTime / audio.duration >= 0.4) primeNextSurah();
+});
+// Also prime as soon as a new surah starts playing (covers the case where the
+// user jumps near the end of a short surah).
+audio.addEventListener('playing', () => {
+  if(!isVerseMode) setTimeout(primeNextSurah, 2000);
+});
+
 // Background-safe surah advancement.
 // Unlike playSurah() which does heavy DOM work (re-rendering reciters, smooth
 // scroll, etc.), this function keeps things minimal so the browser doesn't

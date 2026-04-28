@@ -186,6 +186,18 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .set-body{padding:18px 20px;overflow-y:auto;flex:1}
 .set-section{margin-bottom:22px}
 .set-section h4{font-size:14px;font-weight:700;color:var(--primary-light);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.set-wake-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px}
+.set-wake-box .wake-info{flex:1}
+.set-wake-box .wake-title{font-size:14px;font-weight:700;color:#ddeee4}
+.set-wake-box .wake-sub{font-size:12px;opacity:.7;margin-top:3px;line-height:1.5}
+.wake-toggle{position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;cursor:pointer}
+.wake-toggle input{opacity:0;width:0;height:0}
+.wake-slider{position:absolute;inset:0;background:#3a3a3a;border-radius:26px;transition:.3s}
+.wake-slider::before{content:'';position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s}
+.wake-toggle input:checked + .wake-slider{background:var(--accent)}
+.wake-toggle input:checked + .wake-slider::before{transform:translateX(22px)}
+html[dir="rtl"] .wake-slider::before{left:auto;right:3px}
+html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:translateX(-22px)}
 .set-storage{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px}
 .set-storage .stor-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0}
 .set-storage .stor-info{flex:1}
@@ -4270,6 +4282,19 @@ restoreState();
     </div>
     <div class="set-body">
       <div class="set-section">
+        <h4><i class="fa fa-lightbulb"></i> إبقاء الشاشة مضاءة</h4>
+        <div class="set-wake-box">
+          <div class="wake-info">
+            <div class="wake-title" id="wakeStatus">الوضع التلقائي</div>
+            <div class="wake-sub" id="wakeHint">تُطفَأ الشاشة كالمعتاد أثناء الاستماع.</div>
+          </div>
+          <label class="wake-toggle">
+            <input type="checkbox" id="wakeToggle" onchange="toggleWakeLockPref(this.checked)">
+            <span class="wake-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="set-section">
         <h4><i class="fa fa-cloud-arrow-down"></i> السور المحملة للاستماع بدون إنترنت</h4>
         <div class="set-storage" id="setStorageBox">
           <div class="stor-icon"><i class="fa fa-hard-drive"></i></div>
@@ -4589,9 +4614,90 @@ async function trySurahBlobFallback(){
   }
 }
 
+/* ===== Screen Wake Lock (keep-screen-on) =====
+ * When ON, the screen stays lit while the app is visible and audio is
+ * playing (useful for reciting along with the player).
+ * When OFF (default/auto), the OS follows its normal sleep policy.
+ * Uses the Screen Wake Lock API: requires HTTPS/localhost, and the page
+ * must be visible (the OS releases the lock on tab hide — we re-acquire
+ * it on visibilitychange).
+ */
+const WAKE_LOCK_KEY = 'q_wakeLockPref'; // '1' = user wants screen on
+let _wakeLock = null;
+let _wakeLockPref = localStorage.getItem(WAKE_LOCK_KEY) === '1';
+
+function wakeLockSupported(){
+  return 'wakeLock' in navigator && typeof navigator.wakeLock.request === 'function';
+}
+
+async function acquireWakeLock(){
+  if(!_wakeLockPref) return;
+  if(!wakeLockSupported()) return;
+  if(_wakeLock) return; // already held
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+  } catch(e){
+    // Permission denied / page hidden — will retry on next audio.play()
+    _wakeLock = null;
+  }
+}
+async function releaseWakeLock(){
+  if(!_wakeLock) return;
+  try { await _wakeLock.release(); } catch(e){}
+  _wakeLock = null;
+}
+
+// Keep screen on only while audio is actually playing, to conserve battery.
+audio.addEventListener('play',    acquireWakeLock);
+audio.addEventListener('playing', acquireWakeLock);
+audio.addEventListener('pause',   releaseWakeLock);
+audio.addEventListener('ended',   releaseWakeLock);
+// The browser auto-releases the lock when the tab becomes hidden. Re-acquire
+// when the user returns if audio is still playing.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && !audio.paused) acquireWakeLock();
+});
+
+function updateWakeUI(){
+  const toggle = document.getElementById('wakeToggle');
+  const status = document.getElementById('wakeStatus');
+  const hint   = document.getElementById('wakeHint');
+  if(!toggle) return;
+  toggle.checked = _wakeLockPref;
+  if(!wakeLockSupported()){
+    toggle.disabled = true;
+    status.textContent = 'غير مدعوم';
+    hint.textContent = 'هذا المتصفح/النظام لا يدعم الحفاظ على الشاشة مضاءة. جرّب Chrome حديثاً على HTTPS.';
+    return;
+  }
+  toggle.disabled = false;
+  if(_wakeLockPref){
+    status.textContent = 'الشاشة تبقى مضاءة';
+    hint.textContent = 'ستبقى الشاشة مضاءة أثناء التشغيل فقط. تُطفَأ تلقائياً عند الإيقاف لتوفير البطارية.';
+  } else {
+    status.textContent = 'الوضع التلقائي';
+    hint.textContent = 'تُطفَأ الشاشة كالمعتاد أثناء الاستماع (يستمر الصوت في الخلفية).';
+  }
+}
+
+function toggleWakeLockPref(on){
+  _wakeLockPref = !!on;
+  try { localStorage.setItem(WAKE_LOCK_KEY, _wakeLockPref ? '1' : '0'); } catch(e){}
+  updateWakeUI();
+  if(_wakeLockPref){
+    if(!audio.paused) acquireWakeLock();
+    if(typeof showToast === 'function') showToast('🔆 الشاشة ستبقى مضاءة أثناء التشغيل', 2200);
+  } else {
+    releaseWakeLock();
+    if(typeof showToast === 'function') showToast('💤 الوضع التلقائي — الشاشة ستُطفَأ كالمعتاد', 2200);
+  }
+}
+
 /* ===== Settings modal ===== */
 function openSettings(){
   document.getElementById('setOverlay').classList.add('show');
+  updateWakeUI();
   renderSettingsList();
 }
 function closeSettings(){

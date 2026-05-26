@@ -2695,10 +2695,35 @@ async function onSearch(q) {
     await loadLocalQuran();
     if(localVerses){
       const keys = Object.keys(localVerses);
-      const MAX_RESULTS = 50;
+      const MAX_RESULTS = 80;
+      // 🔍 بناء متغيرات البحث: التعامل مع "ال" التعريف والبادئات
+      // 🔍 Build search variants: handle definite article "ال" and common prefixes
+      // مثال: "المائدة" يجرب أيضاً "مائده" لأن الآيات فيها "مَائِدَةً" بدون أل
+      const variants = new Set([normalizedQ]);
+      if(normalizedQ.startsWith('ال') && normalizedQ.length > 3){
+        variants.add(normalizedQ.slice(2));               // المائدة → مائده
+      } else if(normalizedQ.length >= 2){
+        variants.add('ال' + normalizedQ);
+      }
+      // إزالة بادئة حروف العطف/الجر (و, ف, ل, ب, ك) للبحث الموسع
+      const firstChar = normalizedQ.charAt(0);
+      if(['و','ف','ل','ب','ك'].includes(firstChar) && normalizedQ.length > 3){
+        const rest = normalizedQ.slice(1);
+        variants.add(rest);
+        if(rest.startsWith('ال') && rest.length > 3) variants.add(rest.slice(2));
+      }
+      const variantsArr = Array.from(variants).filter(v => v.length >= 2);
+      const seenKeys = new Set();
       for(const k of keys){
+        if(seenKeys.has(k)) continue;
         const v = localVerses[k];
-        if(normalizeArabic(v.text).includes(normalizedQ)){
+        const normText = normalizeArabic(v.text);
+        let matched = false;
+        for(const vr of variantsArr){
+          if(normText.includes(vr)){ matched = true; break; }
+        }
+        if(matched){
+          seenKeys.add(k);
           const [s, a] = k.split(':').map(Number);
           ayahMatches.push({s, a, text: v.text});
           if(ayahMatches.length >= MAX_RESULTS) break;
@@ -2713,13 +2738,14 @@ async function onSearch(q) {
     html += `<h3 style="margin:0 0 12px;color:var(--primary)"><i class="fa fa-location-arrow"></i> ${currentLang==='en'?'Quick Jump':'انتقال سريع'}</h3>`;
     html += numericMatches.map(m => {
       if(m.type === 'surah'){
-        return `<div class="sr-item" onclick="pickReciterForSurah(${m.s})">
+        return `<div class="sr-item" style="cursor:default">
           <div class="s-num">${m.s}</div>
-          <div class="s-info">
+          <div class="s-info" style="cursor:pointer" onclick="openSurahText(${m.s})">
             <div class="s-name">${m.label}</div>
             <div class="s-meta">${currentLang==='en'?'Open surah':'فتح السورة'}</div>
           </div>
-          <i class="fa fa-play" style="color:var(--primary)"></i>
+          <button onclick="event.stopPropagation();openSurahText(${m.s})" title="${currentLang==='en'?'Read':'قراءة'}" style="background:var(--border);border:none;color:var(--primary-light);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa fa-book-open"></i></button>
+          <button onclick="event.stopPropagation();pickReciterForSurah(${m.s})" title="${currentLang==='en'?'Listen':'استماع'}" style="background:var(--primary);border:none;color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa fa-play"></i></button>
         </div>`;
       }
       return `<div class="sr-item" onclick="goToAyahFromSearch(${m.s},${m.a})">
@@ -2735,13 +2761,14 @@ async function onSearch(q) {
   if (surahMatches.length) {
     html += `<h3 style="margin:${numericMatches.length?'16px':'0'} 0 12px;color:var(--primary)">${T('surahs')}</h3>`;
     html += surahMatches.map(s => `
-      <div class="sr-item" onclick="pickReciterForSurah(${s.id})">
+      <div class="sr-item" style="cursor:default">
         <div class="s-num">${s.id}</div>
-        <div class="s-info">
+        <div class="s-info" style="cursor:pointer" onclick="openSurahText(${s.id})">
           <div class="s-name">${surahName(s)}</div>
           <div class="s-meta">${s.verses} ${T('verses')} · ${s.type==='مكية'?T('meccan'):T('medinan')}</div>
         </div>
-        <i class="fa fa-play" style="color:var(--primary)"></i>
+        <button onclick="event.stopPropagation();openSurahText(${s.id})" title="${currentLang==='en'?'Read':'قراءة'}" style="background:var(--border);border:none;color:var(--primary-light);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s" onmouseover="this.style.background='var(--primary)';this.style.color='#fff'" onmouseout="this.style.background='var(--border)';this.style.color='var(--primary-light)'"><i class="fa fa-book-open"></i></button>
+        <button onclick="event.stopPropagation();pickReciterForSurah(${s.id})" title="${currentLang==='en'?'Listen':'استماع'}" style="background:var(--primary);border:none;color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background='var(--primary)'"><i class="fa fa-play"></i></button>
       </div>`).join('');
   }
   if (reciterMatches.length) {
@@ -2793,6 +2820,17 @@ function goToAyahFromSearch(surah, ayah){
       navigateToVerse(surah, ayah, ()=>{
         highlightTemp(surah, ayah);
       });
+    });
+  }, 100);
+}
+
+// فتح سورة للقراءة من نتائج البحث (يفتح المصحف على أول آية)
+// Open Surah for READING from search results (opens the Mushaf at the first verse)
+function openSurahText(surahId){
+  showPage('pdf');
+  setTimeout(()=>{
+    ensurePDFLoaded().then(()=>{
+      navigateToVerse(surahId, 1);
     });
   }, 100);
 }

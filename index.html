@@ -3193,38 +3193,53 @@ function initVerseHandlers(){
     const newEl = el.cloneNode(true);
     el.parentNode.replaceChild(newEl, el);
     
-    // Touch events for mobile
+    // Touch events for mobile — long-press with tremor tolerance
     newEl.addEventListener('touchstart',e=>{
       currentVerseEl = newEl;
-      // Special mode: if audio is playing AND player is hidden, a long-press
-      // (1s) reveals the player instead of opening the verse context menu.
-      // This lets the user bring back the player without leaving the verse area.
       const audioEl = document.getElementById('audio');
       const playerEl = document.getElementById('player');
       const playerHidden = playerEl && !playerEl.classList.contains('show');
-      const audioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.currentTime > 0;
-      if(playerHidden && audioPlaying){
+      // "Audio active" = src loaded + not paused/ended (don't require currentTime>0,
+      // it can be exactly 0 mid-transition between verses)
+      const audioActive = !!(audioEl && audioEl.src && !audioEl.paused && !audioEl.ended);
+      const t0 = e.touches[0] || {clientX:0, clientY:0};
+      newEl._lpStartX = t0.clientX;
+      newEl._lpStartY = t0.clientY;
+      newEl._lpFired = false;
+      if(playerHidden && audioActive){
+        // Long-press (1s) shows the hidden player. Suppress the click-to-play
+        // afterwards by setting _lpFired = true.
         lpTimer = setTimeout(()=>{
           playerEl.classList.add('show');
+          newEl._lpFired = true;
           if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
         }, 1000);
       } else {
+        // Normal mode: long-press (500ms) opens context menu
         lpTimer = setTimeout(()=>{
           const touch = e.touches[0] || e.changedTouches[0];
+          newEl._lpFired = true;
           showCtx(touch, newEl);
         }, 500);
       }
     },{passive:true});
-    
+
     newEl.addEventListener('touchend',()=>{
-      clearTimeout(lpTimer);
-      lpTimer = null;
+      if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; }
     });
-    
-    newEl.addEventListener('touchmove',()=>{
-      clearTimeout(lpTimer);
-      lpTimer = null;
-    });
+
+    // Cancel only on significant movement (15px). Finger tremor is normal.
+    newEl.addEventListener('touchmove',e=>{
+      if(!lpTimer) return;
+      const t = e.touches[0];
+      if(!t || newEl._lpStartX == null) return;
+      const dx = Math.abs(t.clientX - newEl._lpStartX);
+      const dy = Math.abs(t.clientY - newEl._lpStartY);
+      if(dx > 15 || dy > 15){
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    },{passive:true});
     
     // Desktop: mousedown long-press → show player if audio is playing and player hidden
     newEl.addEventListener('mousedown',e=>{
@@ -3247,9 +3262,17 @@ function initVerseHandlers(){
       showCtx(e, newEl);
     });
     
-    // Click to play verse
+    // Click to play verse — but suppress if a long-press just fired
     newEl.addEventListener('click',e=>{
-      if(lpTimer) clearTimeout(lpTimer);
+      if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; }
+      // If a long-press just fired (showed player or context menu),
+      // do NOT also play the verse — it was a deliberate hold, not a tap.
+      if(newEl._lpFired){
+        newEl._lpFired = false;
+        e.stopPropagation();
+        e.preventDefault && e.preventDefault();
+        return;
+      }
       // Only play if context menu is not showing
       if(!document.getElementById('ctxMenu').classList.contains('show')){
         playVerseFromClick(newEl);

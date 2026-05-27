@@ -3196,10 +3196,24 @@ function initVerseHandlers(){
     // Touch events for mobile
     newEl.addEventListener('touchstart',e=>{
       currentVerseEl = newEl;
-      lpTimer = setTimeout(()=>{
-        const touch = e.touches[0] || e.changedTouches[0];
-        showCtx(touch, newEl);
-      }, 500);
+      // Special mode: if audio is playing AND player is hidden, a long-press
+      // (1s) reveals the player instead of opening the verse context menu.
+      // This lets the user bring back the player without leaving the verse area.
+      const audioEl = document.getElementById('audio');
+      const playerEl = document.getElementById('player');
+      const playerHidden = playerEl && !playerEl.classList.contains('show');
+      const audioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.currentTime > 0;
+      if(playerHidden && audioPlaying){
+        lpTimer = setTimeout(()=>{
+          playerEl.classList.add('show');
+          if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
+        }, 1000);
+      } else {
+        lpTimer = setTimeout(()=>{
+          const touch = e.touches[0] || e.changedTouches[0];
+          showCtx(touch, newEl);
+        }, 500);
+      }
     },{passive:true});
     
     newEl.addEventListener('touchend',()=>{
@@ -3212,6 +3226,21 @@ function initVerseHandlers(){
       lpTimer = null;
     });
     
+    // Desktop: mousedown long-press → show player if audio is playing and player hidden
+    newEl.addEventListener('mousedown',e=>{
+      if(e.button !== 0) return; // primary button only
+      const audioEl = document.getElementById('audio');
+      const playerEl = document.getElementById('player');
+      const playerHidden = playerEl && !playerEl.classList.contains('show');
+      const audioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.currentTime > 0;
+      if(!(playerHidden && audioPlaying)) return; // fall through to normal click handling
+      lpTimer = setTimeout(()=>{
+        playerEl.classList.add('show');
+        if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
+      }, 1000);
+    });
+    newEl.addEventListener('mouseup',()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; } });
+    newEl.addEventListener('mouseleave',()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; } });
     // Right-click for desktop
     newEl.addEventListener('contextmenu',e=>{
       e.preventDefault();

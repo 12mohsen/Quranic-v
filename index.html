@@ -286,6 +286,22 @@ html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:tran
 /* BOTTOM PLAYER */
 .player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);background:linear-gradient(135deg,var(--primary-dark),#112d1e);color:#fff;display:flex;align-items:center;padding:0 20px;gap:18px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.3);transform:translateY(110%);opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .3s ease;will-change:transform,opacity}
 .player.show{transform:translateY(0);opacity:1;pointer-events:auto}
+
+/* SUMMON-PLAYER PILL — appears when audio is active but the player is hidden.
+   Tap it (no long-press needed) to bring back the player. */
+#summonPlayer{position:fixed;left:50%;bottom:16px;transform:translateX(-50%) translateY(140%);z-index:201;background:linear-gradient(135deg,var(--accent),#c9982f);color:#1a1a1a;border:none;border-radius:28px;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 0 0 rgba(212,168,67,.45);opacity:0;pointer-events:none;font-family:inherit;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .25s ease,box-shadow .3s;animation:none;-webkit-tap-highlight-color:transparent}
+#summonPlayer.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto;animation:summonPulse 1.8s ease-in-out infinite}
+#summonPlayer:active{transform:translateX(-50%) scale(.94)}
+#summonPlayer .sp-icon{width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+#summonPlayer .sp-icon i.fa-headphones{animation:summonBob 1.4s ease-in-out infinite}
+#summonPlayer .sp-text{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:right}
+@keyframes summonPulse{0%,100%{box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 0 0 rgba(212,168,67,.5)}50%{box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 0 10px rgba(212,168,67,0)}}
+@keyframes summonBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@media(max-width:600px){
+  #summonPlayer{padding:9px 14px;font-size:12px;bottom:14px}
+  #summonPlayer .sp-icon{width:26px;height:26px;font-size:11px}
+  #summonPlayer .sp-text{max-width:160px}
+}
 /* Long-press progress hint (subtle line filling at bottom of screen during long-press) */
 body.lp-pending::after{content:'';position:fixed;left:0;bottom:0;height:3px;width:100%;background:linear-gradient(90deg,var(--accent),var(--primary-light));z-index:9999;transform-origin:left center;transform:scaleX(0);animation:lpProgress 1s linear forwards;pointer-events:none}
 @keyframes lpProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
@@ -800,6 +816,12 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   </div>
 </div>
 
+<!-- Summon-player floating pill (visible only when audio is active and player is hidden) -->
+<button id="summonPlayer" type="button" aria-label="إظهار مشغل الصوت">
+  <span class="sp-icon"><i class="fa fa-headphones"></i></span>
+  <span class="sp-text" id="summonPlayerText">عرض المشغل</span>
+  <i class="fa fa-chevron-up" style="font-size:11px;opacity:.7"></i>
+</button>
 <audio id="audio" preload="auto"></audio>
 
 <!-- OVERLAY -->
@@ -3193,51 +3215,62 @@ function initVerseHandlers(){
     const newEl = el.cloneNode(true);
     el.parentNode.replaceChild(newEl, el);
     
-    // Touch events for mobile — long-press with tremor tolerance
+    // Touch events for mobile — long-press with tremor tolerance.
+    // Uses a CLOSURE-LOCAL timer (myTimer) per verse so concurrent touches
+    // on different verses don't kill each other's pending timers.
+    let myTimer = null;
+    let lpStartX = 0, lpStartY = 0;
     newEl.addEventListener('touchstart',e=>{
       currentVerseEl = newEl;
       const audioEl = document.getElementById('audio');
       const playerEl = document.getElementById('player');
       const playerHidden = playerEl && !playerEl.classList.contains('show');
-      // "Audio active" = src loaded + not paused/ended (don't require currentTime>0,
-      // it can be exactly 0 mid-transition between verses)
       const audioActive = !!(audioEl && audioEl.src && !audioEl.paused && !audioEl.ended);
       const t0 = e.touches[0] || {clientX:0, clientY:0};
-      newEl._lpStartX = t0.clientX;
-      newEl._lpStartY = t0.clientY;
+      lpStartX = t0.clientX;
+      lpStartY = t0.clientY;
       newEl._lpFired = false;
+      // Cancel any previous timer on this element
+      if(myTimer){ clearTimeout(myTimer); myTimer = null; }
       if(playerHidden && audioActive){
-        // Long-press (1s) shows the hidden player. Suppress the click-to-play
-        // afterwards by setting _lpFired = true.
-        lpTimer = setTimeout(()=>{
+        // Player is hidden during playback → long-press summons the player
+        myTimer = setTimeout(()=>{
+          myTimer = null;
           playerEl.classList.add('show');
           newEl._lpFired = true;
           if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
+          if(typeof window.__updateSummonPill === 'function') window.__updateSummonPill();
         }, 1000);
       } else {
-        // Normal mode: long-press (500ms) opens context menu
-        lpTimer = setTimeout(()=>{
+        // Normal: long-press opens context menu
+        myTimer = setTimeout(()=>{
+          myTimer = null;
           const touch = e.touches[0] || e.changedTouches[0];
           newEl._lpFired = true;
           showCtx(touch, newEl);
         }, 500);
       }
+      // Keep the legacy module-scoped lpTimer alias so the click handler
+      // can still know "a press is pending"
+      lpTimer = myTimer;
     },{passive:true});
 
     newEl.addEventListener('touchend',()=>{
-      if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; }
+      if(myTimer){ clearTimeout(myTimer); myTimer = null; lpTimer = null; }
+    });
+    newEl.addEventListener('touchcancel',()=>{
+      if(myTimer){ clearTimeout(myTimer); myTimer = null; lpTimer = null; }
     });
 
     // Cancel only on significant movement (15px). Finger tremor is normal.
     newEl.addEventListener('touchmove',e=>{
-      if(!lpTimer) return;
+      if(!myTimer) return;
       const t = e.touches[0];
-      if(!t || newEl._lpStartX == null) return;
-      const dx = Math.abs(t.clientX - newEl._lpStartX);
-      const dy = Math.abs(t.clientY - newEl._lpStartY);
-      if(dx > 15 || dy > 15){
-        clearTimeout(lpTimer);
-        lpTimer = null;
+      if(!t) return;
+      const dx = Math.abs(t.clientX - lpStartX);
+      const dy = Math.abs(t.clientY - lpStartY);
+      if(dx > 18 || dy > 18){
+        clearTimeout(myTimer); myTimer = null; lpTimer = null;
       }
     },{passive:true});
     
@@ -5187,6 +5220,76 @@ function navFlash(btn){
       }
       lastY = y;
     }, { passive: true });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else { init(); }
+})();
+</script>
+<script>
+// ============================================================
+// SUMMON-PLAYER PILL — guaranteed fallback for showing the player
+// ============================================================
+(function(){
+  function init(){
+    const pill = document.getElementById('summonPlayer');
+    const audio = document.getElementById('audio');
+    const player = document.getElementById('player');
+    if(!pill || !audio || !player) return;
+
+    function isAudioActive(){
+      return !!(audio.src && !audio.paused && !audio.ended);
+    }
+    function isPlayerHidden(){
+      return !player.classList.contains('show');
+    }
+    function updatePill(){
+      // Update label text from current surah/reciter shown in player
+      const surahText = (document.getElementById('pSurah')||{}).textContent || '';
+      const reciterText = (document.getElementById('pReciter')||{}).textContent || '';
+      const label = surahText && reciterText
+        ? `${surahText} — ${reciterText}`
+        : (surahText || 'عرض المشغل');
+      const txt = document.getElementById('summonPlayerText');
+      if(txt) txt.textContent = label;
+      // Show pill only if audio playing + player hidden
+      if(isAudioActive() && isPlayerHidden()){
+        pill.classList.add('show');
+      } else {
+        pill.classList.remove('show');
+      }
+    }
+
+    // Click → reveal the player
+    pill.addEventListener('click', function(e){
+      e.stopPropagation();
+      player.classList.add('show');
+      pill.classList.remove('show');
+      if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
+    });
+
+    // Touch handler (mobile) — same as click but prevents bubble issues
+    pill.addEventListener('touchend', function(e){
+      e.stopPropagation();
+    }, { passive: true });
+
+    // React to audio state changes
+    ['play','pause','ended','playing','emptied','loadstart'].forEach(ev=>{
+      audio.addEventListener(ev, updatePill);
+    });
+
+    // React to player class changes (show/hide)
+    const obs = new MutationObserver(updatePill);
+    obs.observe(player, { attributes: true, attributeFilter: ['class'] });
+
+    // Periodic safety check (in case audio.play()/pause() doesn't fire events
+    // — happens on some old WebViews during background playback transitions)
+    setInterval(updatePill, 1500);
+
+    // Initial state
+    updatePill();
+    // Expose for debugging
+    window.__updateSummonPill = updatePill;
   }
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', init);

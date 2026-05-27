@@ -284,8 +284,11 @@ html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:tran
 .pdf-wrap:-webkit-full-screen #returnToPlayBtn{position:fixed!important;bottom:calc(var(--player-h) + 18px)!important;z-index:100005!important;transition:bottom .3s}
 
 /* BOTTOM PLAYER */
-.player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);background:linear-gradient(135deg,var(--primary-dark),#112d1e);color:#fff;display:flex;align-items:center;padding:0 20px;gap:18px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.3);transform:translateY(100%);transition:transform .3s}
-.player.show{transform:translateY(0)}
+.player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);background:linear-gradient(135deg,var(--primary-dark),#112d1e);color:#fff;display:flex;align-items:center;padding:0 20px;gap:18px;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.3);transform:translateY(110%);opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.22,.61,.36,1),opacity .3s ease;will-change:transform,opacity}
+.player.show{transform:translateY(0);opacity:1;pointer-events:auto}
+/* Long-press progress hint (subtle line filling at bottom of screen during long-press) */
+body.lp-pending::after{content:'';position:fixed;left:0;bottom:0;height:3px;width:100%;background:linear-gradient(90deg,var(--accent),var(--primary-light));z-index:9999;transform-origin:left center;transform:scaleX(0);animation:lpProgress 1s linear forwards;pointer-events:none}
+@keyframes lpProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .p-info{flex:1;min-width:0;overflow:hidden}
 .p-surah{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden}
 .p-surah.scrolling{animation:marquee 6s linear infinite}
@@ -479,7 +482,9 @@ html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:tran
 .vt-btn.active{background:var(--primary);color:#fff}
 
 /* CONTEXT MENU */
-.ctx-menu{position:fixed;z-index:500;background:#1a2e22;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.7);min-width:200px;padding:6px 0;display:none;max-height:70vh;overflow-y:auto}
+.ctx-menu{position:fixed;z-index:500;background:#1a2e22;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.7);min-width:220px;max-width:320px;padding:6px 0;display:none;max-height:70vh;overflow-y:auto}
+.ctx-item .bm-label.has-verse{font-family:'Amiri',serif;font-size:14px;line-height:1.6;color:#e8dcc8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;direction:rtl;text-align:right}
+.ctx-item[data-bm-slot]{align-items:flex-start;padding-top:8px;padding-bottom:8px}
 .ctx-menu.show{display:block}
 .ctx-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;color:#ddeee4;transition:.15s}
 .ctx-item:hover{background:rgba(39,160,101,0.15)}
@@ -591,10 +596,21 @@ html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:tran
 .overlay.show{display:block}
 
 /* TEXT SWIPE NAV BTNS */
-.text-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;background:rgba(255,255,255,0.1);border:none;color:#fff;width:36px;height:60px;cursor:pointer;font-size:18px;transition:.2s;border-radius:6px}
-.text-nav:hover{background:rgba(255,255,255,0.2)}
-.text-nav.tn-r{right:4px}
-.text-nav.tn-l{left:4px}
+/* NAVIGATION ARROWS — Glassmorphic gold-accent design */
+.text-nav{position:absolute;top:50%;z-index:5;width:48px;height:84px;cursor:pointer;border:1.5px solid rgba(212,168,67,0.45);background:linear-gradient(135deg,rgba(212,168,67,0.18),rgba(39,160,101,0.18));backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);color:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 6px 22px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 0 rgba(212,168,67,.5);opacity:.92;transform:translateY(-50%) scale(1);transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .25s,border-color .25s,box-shadow .3s,opacity .25s,color .2s;animation:tnBreathe 2.8s ease-in-out infinite;-webkit-tap-highlight-color:transparent;outline:none}
+.text-nav::after{content:attr(data-tip);position:absolute;top:50%;background:rgba(20,40,30,.95);color:var(--accent);font-size:11px;font-weight:600;padding:5px 10px;border-radius:8px;white-space:nowrap;pointer-events:none;opacity:0;transform:translateY(-50%) scale(.85);transition:opacity .2s,transform .25s;border:1px solid rgba(212,168,67,.3);font-family:'Segoe UI',sans-serif}
+.text-nav.tn-r::after{right:calc(100% + 10px)}
+.text-nav.tn-l::after{left:calc(100% + 10px)}
+.text-nav:hover{background:linear-gradient(135deg,rgba(212,168,67,.45),rgba(39,160,101,.45));border-color:var(--accent);color:#fff;transform:translateY(-50%) scale(1.1);box-shadow:0 8px 30px rgba(212,168,67,.4),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 4px rgba(212,168,67,.15);opacity:1;animation:none}
+.text-nav:hover::after{opacity:1;transform:translateY(-50%) scale(1)}
+.text-nav:active{transform:translateY(-50%) scale(.94);transition:transform .08s ease;animation:none}
+.text-nav.tn-r{right:10px}
+.text-nav.tn-l{left:10px}
+.text-nav i{filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));transition:transform .25s}
+.text-nav:hover i{transform:scale(1.15)}
+@keyframes tnBreathe{0%,100%{transform:translateY(-50%) scale(1);box-shadow:0 6px 22px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 0 rgba(212,168,67,.5)}50%{transform:translateY(-50%) scale(1.04);box-shadow:0 6px 22px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 8px rgba(212,168,67,0)}}
+.text-nav.tn-flash{animation:tnFlash .55s ease-out!important}
+@keyframes tnFlash{0%{box-shadow:0 6px 22px rgba(0,0,0,.4),0 0 0 0 rgba(212,168,67,.7)}100%{box-shadow:0 6px 22px rgba(0,0,0,.4),0 0 0 24px rgba(212,168,67,0)}}
 @media(max-width:900px){
   .quran-text{font-size:22px;line-height:2.2}
   .surah-hdr{font-size:20px}
@@ -605,7 +621,10 @@ html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:tran
   .ctx-item i{width:22px;font-size:16px}
   .bm-dot{width:14px;height:14px}
   .ctx-sep{margin:6px 0}
-  .text-nav{width:28px;height:44px;font-size:14px}
+  .text-nav{width:42px;height:68px;font-size:18px;border-radius:12px}
+  .text-nav.tn-r{right:6px}
+  .text-nav.tn-l{left:6px}
+  .text-nav::after{font-size:10px;padding:4px 8px}
   /* Prevent text selection on verses for better touch experience */
   .vrs{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
   /* Ensure context menu is clickable on mobile */
@@ -709,8 +728,8 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
       </div>
       <!-- TEXT-BASED MUSHAF VIEW -->
       <div class="text-mushaf" id="textMushaf" onclick="toggleFsUI(event)">
-        <button class="text-nav tn-r" onclick="pdfPrev()"><i class="fa fa-chevron-right"></i></button>
-        <button class="text-nav tn-l" onclick="pdfNext()"><i class="fa fa-chevron-left"></i></button>
+        <button class="text-nav tn-r" onclick="navFlash(this);pdfPrev()" aria-label="الصفحة السابقة" data-tip="السابقة" data-i18n-tip="prevPage"><i class="fa fa-chevron-right"></i></button>
+        <button class="text-nav tn-l" onclick="navFlash(this);pdfNext()" aria-label="الصفحة التالية" data-tip="التالية" data-i18n-tip="nextPage"><i class="fa fa-chevron-left"></i></button>
         <button id="returnToPlayBtn" onclick="returnToPlay()" style="display:none;position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:var(--accent);color:#1a1a1a;border:none;border-radius:24px;padding:10px 22px;font-size:14px;font-family:'Amiri',serif;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);white-space:nowrap;animation:pulse-ring 1.2s ease-out infinite"><i class="fa fa-location-crosshairs"></i> <span data-i18n="returnToPlay">العودة للتلاوة</span></button>
         <div class="text-reciter-bar" onclick="toggleReciterDropdown(event)">
           <i class="fa fa-headphones"></i>
@@ -799,11 +818,11 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
 
 <!-- CONTEXT MENU -->
 <div class="ctx-menu" id="ctxMenu">
-  <div class="ctx-item" onclick="setBookmark(0)"><span class="bm-dot" style="background:#e74c3c"></span> <span data-i18n="bm1">فاصل ١</span></div>
-  <div class="ctx-item" onclick="setBookmark(1)"><span class="bm-dot" style="background:#3498db"></span> <span data-i18n="bm2">فاصل ٢</span></div>
-  <div class="ctx-item" onclick="setBookmark(2)"><span class="bm-dot" style="background:#f39c12"></span> <span data-i18n="bm3">فاصل ٣</span></div>
-  <div class="ctx-item" onclick="setBookmark(3)"><span class="bm-dot" style="background:#2ecc71"></span> <span data-i18n="bm4">فاصل ٤</span></div>
-  <div class="ctx-item" onclick="setBookmark(4)"><span class="bm-dot" style="background:#9b59b6"></span> <span data-i18n="bm5">فاصل ٥</span></div>
+  <div class="ctx-item" data-bm-slot="0" onclick="setBookmark(0)"><span class="bm-dot" style="background:#e74c3c"></span> <span class="bm-label" data-i18n="bm1">فاصل ١</span></div>
+  <div class="ctx-item" data-bm-slot="1" onclick="setBookmark(1)"><span class="bm-dot" style="background:#3498db"></span> <span class="bm-label" data-i18n="bm2">فاصل ٢</span></div>
+  <div class="ctx-item" data-bm-slot="2" onclick="setBookmark(2)"><span class="bm-dot" style="background:#f39c12"></span> <span class="bm-label" data-i18n="bm3">فاصل ٣</span></div>
+  <div class="ctx-item" data-bm-slot="3" onclick="setBookmark(3)"><span class="bm-dot" style="background:#2ecc71"></span> <span class="bm-label" data-i18n="bm4">فاصل ٤</span></div>
+  <div class="ctx-item" data-bm-slot="4" onclick="setBookmark(4)"><span class="bm-dot" style="background:#9b59b6"></span> <span class="bm-label" data-i18n="bm5">فاصل ٥</span></div>
   <div class="ctx-item" onclick="setBookmark(-1)"><i class="fa fa-plus" style="width:11px;font-size:11px"></i> <span data-i18n="addBookmark">إضافة فاصل جديد</span></div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctxFav" onclick="toggleFavorite()"><i class="fa fa-heart"></i> <span data-i18n="addFav">إضافة للمفضلة</span></div>
@@ -3218,6 +3237,26 @@ function showCtx(e,el){
   ctxVerse={s:+el.dataset.s,a:+el.dataset.a,n:+el.dataset.n,sn:el.dataset.sn,txt:el.textContent};
   const isFav=favorites.some(f=>f.surah===ctxVerse.s&&f.ayah===ctxVerse.a);
   document.getElementById('ctxFav').innerHTML=`<i class="fa fa-heart${isFav?' ':'-regular '}"></i> <span>${isFav?T('removeFav'):T('addFav')}</span>`;
+  // Update bookmark slot labels: show saved verse text if a slot is occupied,
+  // otherwise restore the default localized name ("فاصل ١" / "Bookmark 1" / ...)
+  menu.querySelectorAll('.ctx-item[data-bm-slot]').forEach(item => {
+    const slot = +item.dataset.bmSlot;
+    const label = item.querySelector('.bm-label');
+    if(!label) return;
+    const bm = bookmarks[slot];
+    if(bm && bm.text){
+      const verse = (bm.text || '').replace(/\s+/g,' ').trim();
+      const shown = verse.length > 90 ? verse.substring(0, 90) + '…' : verse;
+      label.textContent = shown;
+      label.classList.add('has-verse');
+      item.title = `${bm.surahName||''} — ${T('ayah')} ${bm.ayah}`;
+    } else {
+      const key = label.getAttribute('data-i18n');
+      label.textContent = key ? T(key) : label.textContent;
+      label.classList.remove('has-verse');
+      item.title = '';
+    }
+  });
   
   // Get coordinates from touch or mouse event
   let x, y;
@@ -4875,6 +4914,185 @@ document.addEventListener('keydown', (e)=>{
       })
       .catch(function(err){ console.warn('SW registration failed:', err); });
   });
+})();
+
+// ============================================================
+// AUDIO PLAYER: Long-press to SHOW, single-tap outside to HIDE
+// (Works on desktop via mouse and on mobile via touch)
+// ============================================================
+(function(){
+  const LONG_PRESS_MS = 1000;          // 1 second
+  const MOVE_TOLERANCE = 12;           // px before we consider it a drag/scroll
+  let lpTimer = null;
+  let lpStartX = 0, lpStartY = 0;
+  let lpActive = false;                // becomes true if the long-press completes
+  let lpPointerDown = false;           // pointer is currently down
+  let lpStartedAt = 0;
+
+  function getPlayer(){ return document.getElementById('player'); }
+
+  // Return true if the event target is somewhere we must NOT hijack
+  // (player itself, interactive controls, modals, dropdowns, etc.)
+  function isInteractive(target){
+    if(!target || !target.closest) return false;
+    return !!target.closest(
+      '.player, #playerSurahPicker, .ctx-menu, .overlay, ' +
+      '.share-modal, .sp-sheet, .goto-modal, .bm-panel, ' +
+      '.set-overlay, .fb-modal, .confirm-modal, #imgPreviewOverlay, ' +
+      '.text-reciter-bar, .text-reciter-dropdown, ' +
+      'input, textarea, select, button, a, ' +
+      '.surah-card, .reciter-card, .sr-item, .bm-item, .ctx-item, ' +
+      '.fav-reciter-item, .alpha-btn, .nav-btn, .vt-btn, .pm-btn, ' +
+      '.fs-exit-btn, #returnToPlayBtn, .vrs, mark, ' +
+      '.fav-reciters-toggle, .wake-toggle, [contenteditable="true"]'
+    );
+  }
+
+  function clearLp(){
+    if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; }
+    document.body.classList.remove('lp-pending');
+  }
+
+  function showPlayer(){
+    const p = getPlayer();
+    if(p) p.classList.add('show');
+    // Refresh marquee scroll state for surah/reciter labels
+    if(typeof checkPlayerScroll === 'function'){
+      setTimeout(checkPlayerScroll, 50);
+    }
+  }
+
+  function hidePlayer(){
+    const p = getPlayer();
+    if(!p || !p.classList.contains('show')) return;
+    p.classList.remove('show');
+    // Also close the surah picker if it was open
+    const picker = document.getElementById('playerSurahPicker');
+    if(picker && picker.style.display !== 'none'){
+      picker.style.display = 'none';
+      const btn = document.getElementById('pSurahListBtn');
+      if(btn) btn.style.color = '';
+    }
+  }
+
+  // ---------- Long-press START (pointer down) ----------
+  function onPointerDown(e){
+    // Only react to primary mouse button / single touch
+    if(e.type === 'mousedown' && e.button !== 0) return;
+    if(e.type === 'touchstart' && e.touches && e.touches.length > 1) return;
+    if(isInteractive(e.target)) return;
+
+    const pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    lpStartX = pt.clientX;
+    lpStartY = pt.clientY;
+    lpPointerDown = true;
+    lpActive = false;
+    lpStartedAt = Date.now();
+
+    // Subtle visual feedback while waiting for the 1-second threshold
+    document.body.classList.add('lp-pending');
+
+    clearTimeout(lpTimer);
+    lpTimer = setTimeout(function(){
+      // 1 second elapsed without movement/cancel — show the player
+      lpActive = true;
+      lpTimer = null;
+      document.body.classList.remove('lp-pending');
+      showPlayer();
+    }, LONG_PRESS_MS);
+  }
+
+  // ---------- Cancel long-press on movement (scroll / drag) ----------
+  function onPointerMove(e){
+    if(!lpPointerDown || !lpTimer) return;
+    const pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    if(!pt) return;
+    const dx = Math.abs(pt.clientX - lpStartX);
+    const dy = Math.abs(pt.clientY - lpStartY);
+    if(dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE){
+      clearLp();
+    }
+  }
+
+  // ---------- Pointer release ----------
+  function onPointerUp(e){
+    const wasLong = lpActive;
+    const heldFor = Date.now() - lpStartedAt;
+    lpPointerDown = false;
+    lpActive = false;
+    // Pre-1s release: cancel timer, do NOT show the player
+    clearLp();
+
+    // If this release came from a normal (short) tap/click on background,
+    // and the player is currently visible, hide it.
+    // Skip when:
+    //   - the long-press just completed (we just SHOWED the player)
+    //   - the target was interactive
+    if(wasLong) return;
+    if(isInteractive(e.target)) return;
+
+    // For touchend we use the original target; for mouseup the regular target.
+    const p = getPlayer();
+    if(p && p.classList.contains('show') && heldFor < LONG_PRESS_MS){
+      hidePlayer();
+    }
+  }
+
+  function onPointerCancel(){
+    lpPointerDown = false;
+    lpActive = false;
+    clearLp();
+  }
+
+  // Bind on document; capture phase so we can see events before child handlers
+  // but we DON'T stop propagation — existing click handlers (play buttons, etc.) keep working.
+  document.addEventListener('mousedown',  onPointerDown,   { passive: true });
+  document.addEventListener('mousemove',  onPointerMove,   { passive: true });
+  document.addEventListener('mouseup',    onPointerUp,     { passive: true });
+  document.addEventListener('touchstart', onPointerDown,   { passive: true });
+  document.addEventListener('touchmove',  onPointerMove,   { passive: true });
+  document.addEventListener('touchend',   onPointerUp,     { passive: true });
+  document.addEventListener('touchcancel',onPointerCancel, { passive: true });
+  // If user scrolls the page, abort the pending long-press
+  window.addEventListener('scroll', onPointerCancel, { passive: true });
+  // If window loses focus / context menu opens, abort
+  window.addEventListener('blur', onPointerCancel);
+  document.addEventListener('contextmenu', onPointerCancel);
+
+  // Expose for debugging / external use
+  window.__playerShow = showPlayer;
+  window.__playerHide = hidePlayer;
+})();
+
+</script>
+<script>
+// ============================================================
+// PAGE-NAV ARROW: trigger ripple flash + sync tooltip to language
+// ============================================================
+function navFlash(btn){
+  if(!btn) return;
+  btn.classList.remove('tn-flash');
+  void btn.offsetWidth;
+  btn.classList.add('tn-flash');
+  setTimeout(()=>btn.classList.remove('tn-flash'), 600);
+}
+(function(){
+  const TIPS = { ar:{prevPage:'السابقة', nextPage:'التالية'},
+                 en:{prevPage:'Previous', nextPage:'Next'} };
+  function syncTips(){
+    const lang = (typeof currentLang === 'string' && TIPS[currentLang]) ? currentLang : 'ar';
+    document.querySelectorAll('[data-i18n-tip]').forEach(el=>{
+      const k = el.getAttribute('data-i18n-tip');
+      if(TIPS[lang][k]) el.setAttribute('data-tip', TIPS[lang][k]);
+    });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', syncTips);
+  } else { syncTips(); }
+  if(typeof window.toggleLang === 'function'){
+    const orig = window.toggleLang;
+    window.toggleLang = function(){ const r = orig.apply(this, arguments); syncTips(); return r; };
+  }
 })();
 </script>
 </body>

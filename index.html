@@ -269,6 +269,10 @@ html[dir="rtl"] .wake-toggle input:checked + .wake-slider::before{transform:tran
 .pdf-wrap.standalone-fs .player,
 .pdf-wrap:fullscreen .player,
 .pdf-wrap:-webkit-full-screen .player{z-index:100003;transition:transform .3s ease}
+.pdf-wrap.standalone-fs #summonPlayer,
+.pdf-wrap:fullscreen #summonPlayer,
+.pdf-wrap:-webkit-full-screen #summonPlayer{z-index:100006}
+.pdf-wrap.fs-ui-hidden #summonPlayer.show{transform:translateX(-50%) translateY(0)!important;opacity:1!important;pointer-events:auto!important}
 /* Surah picker in fullscreen */
 .pdf-wrap.standalone-fs #playerSurahPicker,
 .pdf-wrap:fullscreen #playerSurahPicker,
@@ -2582,7 +2586,7 @@ let _fsMovedEls = [];
 function moveElementsToFullscreen(fsContainer){
   // Move context menu, overlay, and modals into fullscreen container
   // so they're visible when fullscreen API hides everything outside
-  const ids = ['ctxMenu','overlay','shareModal','confirmModal','gotoModal','sharePicker','imgPreviewOverlay','player','playerSurahPicker'];
+  const ids = ['ctxMenu','overlay','shareModal','confirmModal','gotoModal','sharePicker','imgPreviewOverlay','player','playerSurahPicker','summonPlayer'];
   _fsMovedEls = [];
   ids.forEach(id=>{
     const el = document.getElementById(id);
@@ -3224,19 +3228,25 @@ function initVerseHandlers(){
       currentVerseEl = newEl;
       const audioEl = document.getElementById('audio');
       const playerEl = document.getElementById('player');
-      const playerHidden = playerEl && !playerEl.classList.contains('show');
+      // In fullscreen "clean-reading" mode the player has .show but the
+      // wrapper has .fs-ui-hidden which translates it off-screen via CSS.
+      const fsWrap = document.querySelector('.pdf-wrap');
+      const fsHidden = !!(fsWrap && fsWrap.classList.contains('fs-ui-hidden'));
+      const classHidden = playerEl && !playerEl.classList.contains('show');
+      const playerHidden = classHidden || fsHidden;
       const audioActive = !!(audioEl && audioEl.src && !audioEl.paused && !audioEl.ended);
       const t0 = e.touches[0] || {clientX:0, clientY:0};
       lpStartX = t0.clientX;
       lpStartY = t0.clientY;
       newEl._lpFired = false;
-      // Cancel any previous timer on this element
       if(myTimer){ clearTimeout(myTimer); myTimer = null; }
       if(playerHidden && audioActive){
-        // Player is hidden during playback → long-press summons the player
         myTimer = setTimeout(()=>{
           myTimer = null;
           playerEl.classList.add('show');
+          if(fsWrap && fsWrap.classList.contains('fs-ui-hidden')){
+            fsWrap.classList.remove('fs-ui-hidden');
+          }
           newEl._lpFired = true;
           if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
           if(typeof window.__updateSummonPill === 'function') window.__updateSummonPill();
@@ -3276,15 +3286,22 @@ function initVerseHandlers(){
     
     // Desktop: mousedown long-press → show player if audio is playing and player hidden
     newEl.addEventListener('mousedown',e=>{
-      if(e.button !== 0) return; // primary button only
+      if(e.button !== 0) return;
       const audioEl = document.getElementById('audio');
       const playerEl = document.getElementById('player');
-      const playerHidden = playerEl && !playerEl.classList.contains('show');
-      const audioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.currentTime > 0;
-      if(!(playerHidden && audioPlaying)) return; // fall through to normal click handling
+      const fsWrap = document.querySelector('.pdf-wrap');
+      const fsHidden = !!(fsWrap && fsWrap.classList.contains('fs-ui-hidden'));
+      const classHidden = playerEl && !playerEl.classList.contains('show');
+      const playerHidden = classHidden || fsHidden;
+      const audioActive = !!(audioEl && audioEl.src && !audioEl.paused && !audioEl.ended);
+      if(!(playerHidden && audioActive)) return;
       lpTimer = setTimeout(()=>{
         playerEl.classList.add('show');
+        if(fsWrap && fsWrap.classList.contains('fs-ui-hidden')){
+          fsWrap.classList.remove('fs-ui-hidden');
+        }
         if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
+        if(typeof window.__updateSummonPill === 'function') window.__updateSummonPill();
       }, 1000);
     });
     newEl.addEventListener('mouseup',()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer = null; } });
@@ -5241,7 +5258,9 @@ function navFlash(btn){
       return !!(audio.src && !audio.paused && !audio.ended);
     }
     function isPlayerHidden(){
-      return !player.classList.contains('show');
+      const fsWrap = document.querySelector('.pdf-wrap');
+      const fsHidden = !!(fsWrap && fsWrap.classList.contains('fs-ui-hidden'));
+      return !player.classList.contains('show') || fsHidden;
     }
     function updatePill(){
       // Update label text from current surah/reciter shown in player
@@ -5264,6 +5283,10 @@ function navFlash(btn){
     pill.addEventListener('click', function(e){
       e.stopPropagation();
       player.classList.add('show');
+      const fsWrap = document.querySelector('.pdf-wrap');
+      if(fsWrap && fsWrap.classList.contains('fs-ui-hidden')){
+        fsWrap.classList.remove('fs-ui-hidden');
+      }
       pill.classList.remove('show');
       if(typeof checkPlayerScroll === 'function') setTimeout(checkPlayerScroll, 50);
     });
@@ -5281,6 +5304,11 @@ function navFlash(btn){
     // React to player class changes (show/hide)
     const obs = new MutationObserver(updatePill);
     obs.observe(player, { attributes: true, attributeFilter: ['class'] });
+    const wrap = document.querySelector('.pdf-wrap');
+    if(wrap){
+      const obs2 = new MutationObserver(updatePill);
+      obs2.observe(wrap, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // Periodic safety check (in case audio.play()/pause() doesn't fire events
     // — happens on some old WebViews during background playback transitions)

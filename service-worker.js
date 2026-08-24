@@ -1,5 +1,5 @@
 /* Quran PWA Service Worker */
-const VERSION = 'v1.0.8';
+const VERSION = 'v1.0.9';
 const STATIC_CACHE    = `quran-static-${VERSION}`;
 const RUNTIME_CACHE   = `quran-runtime-${VERSION}`;
 const AUDIO_CACHE     = `quran-audio-${VERSION}`;

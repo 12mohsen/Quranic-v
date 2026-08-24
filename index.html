@@ -688,6 +688,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
       <input type="text" id="searchInput" data-i18n-ph="searchPlaceholder" placeholder="ابحث عن سورة أو قارئ أو آية..." oninput="onSearchDebounced(this.value)">
     </div>
     <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:.2s;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'"><i class="fa fa-globe"></i> <span id="langLabel">EN</span></button>
+    <button onclick="shareApp()" id="shareAppBtn" title="مشاركة التطبيق" aria-label="مشاركة التطبيق" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:14px;transition:.2s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'"><i class="fa fa-share-nodes"></i></button>
     <button onclick="openSettings()" id="settingsBtn" title="الإعدادات" aria-label="الإعدادات" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:14px;transition:.2s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'"><i class="fa fa-gear"></i></button>
   </div>
 </header>
@@ -982,6 +983,9 @@ const LANG = {
     all: 'الكل', noReciters: 'لا يوجد قراء', narrationHafs: 'حفص عن عاصم',
     cancel: 'إلغاء', delete: 'حذف', confirmDelete: 'تأكيد الحذف', selectAll: 'تحديد الكل', deleteSelected: 'حذف المحدد',
     shareTitle: 'مشاركة',
+    shareApp: 'مشاركة التطبيق',
+    shareAppMsg: 'تطبيق القرآن الكريم — استماع وتصفح المصحف كاملاً، ويعمل بدون إنترنت 🌙',
+    linkCopied: 'تم نسخ رابط التطبيق ✓',
     shareImage: 'مشاركة صورة',
     shareText: 'مشاركة نص',
     shareNoTashkeel: 'نص بدون تشكيل',
@@ -1024,6 +1028,9 @@ const LANG = {
     all: 'All', noReciters: 'No reciters found', narrationHafs: 'Hafs from Asim',
     cancel: 'Cancel', delete: 'Delete', confirmDelete: 'Confirm Delete', selectAll: 'Select All', deleteSelected: 'Delete Selected',
     shareTitle: 'Share',
+    shareApp: 'Share App',
+    shareAppMsg: 'The Holy Quran app — listen and read the full Mushaf, works offline 🌙',
+    linkCopied: 'App link copied ✓',
     shareImage: 'Share Image',
     shareText: 'Share Text',
     shareNoTashkeel: 'Text without Tashkeel',
@@ -4162,7 +4169,30 @@ function openSharePicker(text){
 function closeSharePicker(){ document.getElementById('sharePicker').classList.remove('show'); _spText=''; }
 
 // App URL for sharing (constant)
-const APP_SHARE_URL='https://luxury-croissant-dd859e.netlify.app';
+const APP_SHARE_URL='https://quranic-v.netlify.app';
+
+// ---- Share the APP itself (header share button) ----
+function shareApp(){
+  const msg = T('shareAppMsg');
+  if(navigator.share){
+    navigator.share({
+      title: currentLang==='en' ? 'The Holy Quran' : 'القرآن الكريم',
+      text: msg,
+      url: APP_SHARE_URL
+    }).catch(function(err){
+      // المستخدم ألغى المشاركة -> لا نفتح شيئاً
+      if(err && (err.name==='AbortError' || err.name==='NotAllowedError')) return;
+      openSharePicker(msg);
+    });
+  }else{
+    openSharePicker(msg);
+  }
+}
+// نسخ رابط التطبيق مباشرة
+function copyAppLink(){
+  silentCopy(APP_SHARE_URL);
+  showToast(T('linkCopied'));
+}
 
 // WebView-safe URL launcher: uses <a> tag click which triggers OS intent handler
 function spLaunch(url){
@@ -4482,6 +4512,18 @@ restoreState();
           <button class="set-clear-btn" id="setInstallBtn" onclick="pwaInstallNow()" style="background:var(--primary);color:#fff">
             <i class="fa fa-plus"></i> تثبيت
           </button>
+        </div>
+      </div>
+      <div class="set-section">
+        <h4><i class="fa fa-share-nodes"></i> <span data-i18n="shareApp">مشاركة التطبيق</span></h4>
+        <div class="set-storage">
+          <div class="stor-icon"><i class="fa fa-link"></i></div>
+          <div class="stor-info">
+            <div class="stor-count" style="font-size:13px;direction:ltr;text-align:left;word-break:break-all">https://quranic-v.netlify.app</div>
+            <div class="stor-size">شارك الأجر مع غيرك</div>
+          </div>
+          <button class="set-clear-btn" onclick="shareApp()" style="background:var(--primary);color:#fff"><i class="fa fa-share-nodes"></i> مشاركة</button>
+          <button class="set-clear-btn" onclick="copyAppLink()" style="background:rgba(255,255,255,0.12);color:#fff"><i class="fa fa-copy"></i> نسخ</button>
         </div>
       </div>
       <div class="set-section">

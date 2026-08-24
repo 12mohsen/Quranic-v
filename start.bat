@@ -6,9 +6,13 @@ echo ═════════════════════════
 echo   جاري تشغيل تطبيق القرآن الكريم...
 echo ══════════════════════════════════════
 echo.
+echo   افتح المتصفح على: http://localhost:8080/
+echo   لتثبيت التطبيق: اضغط أيقونة التثبيت في شريط العنوان
+echo   أو زر «تثبيت» الذي يظهر أسفل الصفحة.
+echo.
 
-:: Try to open browser first
-start "" "http://localhost:8080/quran-app.html"
+:: Open the app in the default browser (index.html is the app entry point)
+start "" "http://localhost:8080/index.html"
 
 :: Try Python launcher, then python, then Node.js
 py -3 -m http.server 8080 2>nul && goto :end

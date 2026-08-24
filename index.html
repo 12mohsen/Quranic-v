@@ -17,8 +17,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="القرآن الكريم">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="القرآن الكريم">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -4467,6 +4471,19 @@ restoreState();
       <button class="set-close" onclick="closeSettings()" aria-label="إغلاق"><i class="fa fa-times"></i></button>
     </div>
     <div class="set-body">
+      <div class="set-section" id="setInstallSection">
+        <h4><i class="fa fa-mobile-screen-button"></i> تثبيت التطبيق على الجهاز</h4>
+        <div class="set-storage">
+          <div class="stor-icon"><i class="fa fa-download"></i></div>
+          <div class="stor-info">
+            <div class="stor-count" id="setInstallTitle">أضف التطبيق للشاشة الرئيسية</div>
+            <div class="stor-size" id="setInstallSub">يعمل بدون إنترنت وبدون شريط المتصفح</div>
+          </div>
+          <button class="set-clear-btn" id="setInstallBtn" onclick="pwaInstallNow()" style="background:var(--primary);color:#fff">
+            <i class="fa fa-plus"></i> تثبيت
+          </button>
+        </div>
+      </div>
       <div class="set-section">
         <h4><i class="fa fa-lightbulb"></i> إبقاء الشاشة مضاءة</h4>
         <div class="set-wake-box">
@@ -5024,6 +5041,144 @@ document.addEventListener('keydown', (e)=>{
       })
       .catch(function(err){ console.warn('SW registration failed:', err); });
   });
+})();
+
+/* ============ PWA: install / add-to-home-screen flow ============ */
+(function(){
+  var deferredPrompt = null;
+  var SNOOZE_KEY = 'q_installSnooze';
+  var SNOOZE_MS  = 5*24*60*60*1000; // 5 أيام
+
+  function isStandalone(){
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+           window.navigator.standalone === true ||
+           document.referrer.indexOf('android-app://') === 0;
+  }
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isSnoozed = function(){
+    var t = +localStorage.getItem(SNOOZE_KEY) || 0;
+    return Date.now() - t < SNOOZE_MS;
+  };
+
+  // ---- Banner ----
+  var css = document.createElement('style');
+  css.textContent =
+  '#pwa-install-banner{position:fixed;bottom:-200px;left:12px;right:12px;max-width:520px;margin:0 auto;'+
+  'background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;padding:14px 16px;'+
+  'border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.55);border:1px solid rgba(212,168,67,.45);'+
+  'display:flex;align-items:center;gap:12px;z-index:10001;transition:bottom .45s cubic-bezier(.2,.8,.2,1);'+
+  "font-family:'Segoe UI',Tahoma,sans-serif;flex-wrap:wrap}"+
+  '#pwa-install-banner.show{bottom:16px}'+
+  '#pwa-install-banner .pwi-icon{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);'+
+  'display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent);flex:0 0 auto}'+
+  '#pwa-install-banner .pwi-txt{flex:1 1 150px;min-width:140px}'+
+  '#pwa-install-banner .pwi-t{font-size:15px;font-weight:700;margin-bottom:2px}'+
+  '#pwa-install-banner .pwi-s{font-size:12px;opacity:.85;line-height:1.5}'+
+  '#pwa-install-banner button{border:none;cursor:pointer;border-radius:22px;font-size:13px;font-weight:700;'+
+  'font-family:inherit;padding:9px 18px;transition:.2s}'+
+  '#pwa-install-banner .pwi-go{background:var(--accent);color:#1a1a1a;box-shadow:0 2px 10px rgba(0,0,0,.3)}'+
+  '#pwa-install-banner .pwi-go:hover{background:#e6bc54;transform:translateY(-1px)}'+
+  '#pwa-install-banner .pwi-no{background:rgba(255,255,255,.12);color:#fff;padding:9px 12px}'+
+  '@media(max-width:420px){#pwa-install-banner .pwi-txt{flex-basis:100%}}';
+  document.head.appendChild(css);
+
+  var banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.setAttribute('role','dialog');
+  banner.innerHTML =
+    '<div class="pwi-icon"><i class="fa fa-mobile-screen-button"></i></div>'+
+    '<div class="pwi-txt"><div class="pwi-t">ثبّت تطبيق القرآن الكريم</div>'+
+    '<div class="pwi-s" id="pwiSub">أضفه لشاشة جهازك ليعمل بدون إنترنت وبدون شريط المتصفح</div></div>'+
+    '<button class="pwi-go" type="button">تثبيت</button>'+
+    '<button class="pwi-no" type="button" aria-label="لاحقاً">لاحقاً</button>';
+  function mount(){ if(!banner.parentNode) document.body.appendChild(banner); }
+  if(document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+
+  function show(){ mount(); requestAnimationFrame(function(){ banner.classList.add('show'); }); }
+  function hide(){ banner.classList.remove('show'); }
+
+  banner.querySelector('.pwi-no').addEventListener('click', function(){
+    localStorage.setItem(SNOOZE_KEY, Date.now());
+    hide();
+  });
+  banner.querySelector('.pwi-go').addEventListener('click', function(){ doInstall(); });
+
+  // ---- iOS instructions ----
+  function iosHint(){
+    document.getElementById('pwiSub').innerHTML =
+      'من متصفح Safari: اضغط زر المشاركة <i class="fa fa-arrow-up-from-bracket"></i> ثم اختر «إضافة إلى الشاشة الرئيسية»';
+    banner.querySelector('.pwi-go').style.display = 'none';
+    show();
+  }
+
+  // ---- Manual fallback for browsers without the prompt API ----
+  function manualHint(){
+    var msg = isIOS
+      ? 'افتح الموقع في Safari ← زر المشاركة ← «إضافة إلى الشاشة الرئيسية»'
+      : 'من قائمة المتصفح (⋮) اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»';
+    if(typeof showToast === 'function') showToast(msg, 6000); else alert(msg);
+  }
+
+  function doInstall(){
+    if(!deferredPrompt){ manualHint(); return; }
+    var dp = deferredPrompt;
+    deferredPrompt = null;
+    hide();
+    dp.prompt();
+    dp.userChoice.then(function(res){
+      if(res && res.outcome === 'dismissed'){
+        localStorage.setItem(SNOOZE_KEY, Date.now());
+      }
+    }).catch(function(){});
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    updateSettingsUI();
+    if(!isStandalone() && !isSnoozed()) setTimeout(show, 2500);
+  });
+
+  window.addEventListener('appinstalled', function(){
+    deferredPrompt = null;
+    hide();
+    localStorage.removeItem(SNOOZE_KEY);
+    updateSettingsUI();
+    if(typeof showToast === 'function') showToast('تم تثبيت التطبيق بنجاح ✓');
+  });
+
+  // iOS never fires beforeinstallprompt
+  if(isIOS && !isStandalone() && !isSnoozed()){
+    window.addEventListener('load', function(){ setTimeout(iosHint, 4000); });
+  }
+
+  // ---- Settings row state ----
+  function updateSettingsUI(){
+    var sec = document.getElementById('setInstallSection');
+    if(!sec) return;
+    var t = document.getElementById('setInstallTitle');
+    var s = document.getElementById('setInstallSub');
+    var b = document.getElementById('setInstallBtn');
+    if(isStandalone()){
+      t.textContent = 'التطبيق مثبَّت على جهازك ✓';
+      s.textContent = 'أنت تستخدم النسخة المثبتة حالياً';
+      b.style.display = 'none';
+    }else{
+      t.textContent = 'أضف التطبيق للشاشة الرئيسية';
+      s.textContent = deferredPrompt
+        ? 'يعمل بدون إنترنت وبدون شريط المتصفح'
+        : (isIOS ? 'Safari: مشاركة ← إضافة إلى الشاشة الرئيسية'
+                 : 'أو من قائمة المتصفح: «تثبيت التطبيق»');
+      b.style.display = '';
+    }
+  }
+  window.addEventListener('load', updateSettingsUI);
+  document.addEventListener('DOMContentLoaded', updateSettingsUI);
+
+  // Public helpers
+  window.pwaInstallNow  = doInstall;
+  window.pwaShowInstall = show;
 })();
 
 // ============================================================

@@ -1,5 +1,5 @@
 /* Quran PWA Service Worker */
-const VERSION = 'v1.0.9';
+const VERSION = 'v1.1.0';
 const STATIC_CACHE    = `quran-static-${VERSION}`;
 const RUNTIME_CACHE   = `quran-runtime-${VERSION}`;
 const AUDIO_CACHE     = `quran-audio-${VERSION}`;
@@ -11,10 +11,12 @@ const PRECACHE_URLS = [
   './',
   './index.html',
   './manifest.json',
-  './icon.svg',
   './icon-192.png',
   './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
   './apple-touch-icon.png',
+  './favicon-32.png',
   './quran-simple.sql',
   './Quran .txt',
   // CDN assets (best-effort; failures are ignored individually)

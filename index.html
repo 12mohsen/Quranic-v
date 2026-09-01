@@ -4894,6 +4894,18 @@ restoreState();
         </div>
       </div>
       <div class="set-section">
+        <h4><i class="fa fa-circle-info"></i> إصدار التطبيق</h4>
+        <div class="set-storage">
+          <div class="stor-icon"><i class="fa fa-code-branch"></i></div>
+          <div class="stor-info">
+            <div class="stor-count" id="setVersion">الإصدار —</div>
+            <div class="stor-size" id="setVersionSub">تحقق من وجود إصدار أحدث</div>
+          </div>
+          <button class="set-clear-btn" onclick="checkForUpdates()" style="background:var(--primary);color:#fff"><i class="fa fa-rotate"></i> تحقق</button>
+          <button class="set-clear-btn" onclick="forceReinstall()" style="background:rgba(255,255,255,0.12);color:#fff" title="إعادة تنزيل ملفات التطبيق"><i class="fa fa-wrench"></i> إصلاح</button>
+        </div>
+      </div>
+      <div class="set-section">
         <h4><i class="fa fa-lightbulb"></i> إبقاء الشاشة مضاءة</h4>
         <div class="set-wake-box">
           <div class="wake-info">
@@ -5307,10 +5319,62 @@ function toggleWakeLockPref(on){
 }
 
 /* ===== Settings modal ===== */
+// ============================================================
+// إصدار التطبيق والتحديث اليدوي
+// ============================================================
+window.APP_VERSION = '1.2.2';
+
+function updateVersionUI(){
+  const el = document.getElementById('setVersion');
+  if(el) el.textContent = 'الإصدار ' + window.APP_VERSION;
+}
+
+// التحقق من وجود إصدار أحدث على الخادم
+async function checkForUpdates(){
+  const sub = document.getElementById('setVersionSub');
+  if(sub) sub.textContent = 'جاري البحث عن تحديث…';
+  if(!('serviceWorker' in navigator)){
+    if(sub) sub.textContent = 'المتصفح لا يدعم التحديث التلقائي';
+    return;
+  }
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(!reg){
+      if(sub) sub.textContent = 'لم يُسجَّل التطبيق بعد — أعد تحميل الصفحة';
+      return;
+    }
+    await reg.update();
+    setTimeout(function(){
+      if(reg.waiting || reg.installing){
+        if(sub) sub.textContent = 'يتوفر إصدار جديد — اضغط «تحديث الآن» في الأعلى';
+        if(window.pwaShowUpdate) window.pwaShowUpdate();
+        showToast('يتوفر إصدار جديد من التطبيق');
+      }else{
+        if(sub) sub.textContent = 'التطبيق محدَّث ✓';
+        showToast('لديك أحدث إصدار ✓');
+      }
+    }, 1800);
+  }catch(e){
+    if(sub) sub.textContent = 'تعذر التحقق — تأكد من الاتصال بالإنترنت';
+  }
+}
+
+// إصلاح/إعادة تنزيل ملفات التطبيق (تبقى السور المحمّلة كما هي)
+function forceReinstall(){
+  const sub = document.getElementById('setVersionSub');
+  if(sub) sub.textContent = 'جاري إعادة تنزيل ملفات التطبيق…';
+  showToast('جاري إعادة تنزيل ملفات التطبيق…', 4000);
+  setTimeout(function(){
+    if(window.pwaForceUpdate) window.pwaForceUpdate();
+    else location.reload();
+  }, 400);
+}
+
 function openSettings(){
   document.getElementById('setOverlay').classList.add('show');
   updateWakeUI();
   renderSettingsList();
+  updateVersionUI();
 }
 function closeSettings(){
   document.getElementById('setOverlay').classList.remove('show');
@@ -5416,20 +5480,93 @@ document.addEventListener('keydown', (e)=>{
     });
   }
 
-  btnGo.addEventListener('click', function(){
-    if(waitingWorker){
-      waitingWorker.postMessage('SKIP_WAITING');
-    } else {
+  // حالة "جاري التحديث" حتى لا تبدو الواجهة جامدة
+  function setBusy(){
+    btnGo.disabled = true;
+    btnGo.style.opacity = '.75';
+    btnGo.style.cursor  = 'progress';
+    btnGo.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري التحديث…';
+    btnBye.style.display = 'none';
+  }
+  function resetBusy(){
+    btnGo.disabled = false;
+    btnGo.style.opacity = '';
+    btnGo.style.cursor  = 'pointer';
+    btnGo.textContent = 'تحديث الآن';
+    btnBye.style.display = '';
+  }
+
+  function doReload(bust){
+    if(refreshing) return;
+    refreshing = true;
+    try{ localStorage.setItem('q_justUpdated','1'); }catch(e){}
+    if(bust){
+      // لا يوجد عامل خدمة الآن -> نتجاوز ذاكرة المتصفح برابط مؤقت
+      location.replace(location.pathname + '?u=' + Date.now() + location.hash);
+    }else{
       location.reload();
     }
+  }
+
+  // الخطة الأخيرة: إزالة عامل الخدمة ومسح الذاكرة المؤقتة (عدا السور المحمّلة)
+  async function hardUpdate(){
+    // بدون إنترنت لا يمكن إعادة التنزيل — نتجنب فقدان النسخة المخزّنة
+    if(navigator.onLine === false){
+      refreshing = false;
+      resetBusy();
+      hideBanner();
+      if(typeof showToast === 'function') showToast('التحديث يحتاج اتصالاً بالإنترنت', 3500);
+      return;
+    }
+    try{
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function(r){ return r.unregister(); }));
+    }catch(e){}
+    try{
+      const keys = await caches.keys();
+      await Promise.all(keys
+        .filter(function(k){ return k !== 'quran-downloads-v1'; })
+        .map(function(k){ return caches.delete(k); }));
+    }catch(e){}
+    doReload(true);
+  }
+
+  btnGo.addEventListener('click', async function(){
+    setBusy();
+    var acted = false;
+    try{
+      const reg = await navigator.serviceWorker.getRegistration();
+      const w = (reg && (reg.waiting || reg.installing)) || waitingWorker;
+      if(w){ w.postMessage({type:'SKIP_WAITING'}); acted = true; }
+      else if(reg){ await reg.update().catch(function(){}); }
+    }catch(e){}
+    // إن لم يستجب عامل الخدمة خلال ثانيتين ونصف: إعادة تحميل عادية
+    setTimeout(function(){
+      if(refreshing) return;
+      if(acted){ doReload(); }
+      else { hardUpdate(); }   // لا يوجد إصدار منتظر -> تحديث قسري
+    }, 2500);
   });
   btnBye.addEventListener('click', hideBanner);
 
   navigator.serviceWorker.addEventListener('controllerchange', function(){
-    if(refreshing) return;
-    refreshing = true;
-    location.reload();
+    doReload();
   });
+
+  // رسالة تأكيد بعد نجاح التحديث
+  window.addEventListener('load', function(){
+    try{
+      if(localStorage.getItem('q_justUpdated') === '1'){
+        localStorage.removeItem('q_justUpdated');
+        setTimeout(function(){
+          if(typeof showToast === 'function') showToast('تم تحديث التطبيق إلى الإصدار ' + (window.APP_VERSION||'') + ' ✓', 4000);
+        }, 1200);
+      }
+    }catch(e){}
+  });
+
+  // تحديث يدوي من الإعدادات
+  window.pwaForceUpdate = hardUpdate;
 
   // وضع المعاينة: أضف ?pwa-test إلى الرابط لرؤية اللوحة
   if(/[?&]pwa-test\b/.test(location.search)){

@@ -143,6 +143,30 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);background-im
 .back-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;margin-right:auto;transition:.2s}
 .back-btn:hover{background:rgba(255,255,255,0.3)}
 
+/* ===== JUZ / HIZB PAGE ===== */
+.juz-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:18px}
+.juz-toolbar .jt-hint{font-size:13px;color:var(--muted);flex:1;min-width:180px}
+.juz-play-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;user-select:none}
+.juz-play-toggle input{width:16px;height:16px;accent-color:var(--primary);cursor:pointer}
+.juz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.juz-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);border:2px solid transparent;transition:.22s;overflow:hidden}
+.juz-card:hover{border-color:var(--primary-light);transform:translateY(-2px);box-shadow:0 6px 18px rgba(26,107,71,.14)}
+.juz-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.juz-num{width:46px;height:46px;flex-shrink:0;border-radius:12px;background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.juz-meta{flex:1;min-width:0}
+.juz-title{font-size:16px;font-weight:700;margin-bottom:3px}
+.juz-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.juz-first{font-family:'Amiri',serif;font-size:15px;color:var(--accent);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl}
+.juz-open{width:34px;height:34px;flex-shrink:0;border:none;border-radius:10px;background:rgba(39,160,101,.16);color:var(--primary-light);cursor:pointer;font-size:14px;transition:.2s}
+.juz-open:hover{background:var(--primary);color:#fff}
+.hizb-row{display:flex;gap:8px;padding:0 16px 14px;flex-wrap:wrap}
+.hizb-chip{flex:1;min-width:120px;background:rgba(39,160,101,.10);border:1px solid var(--border);border-radius:10px;padding:9px 10px;cursor:pointer;transition:.2s;text-align:center}
+.hizb-chip:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+.hizb-chip:hover .hz-sub{color:rgba(255,255,255,.85)}
+.hizb-chip .hz-t{font-size:13px;font-weight:700;display:block}
+.hizb-chip .hz-sub{font-size:11px;color:var(--muted);margin-top:2px;display:block}
+@media(max-width:480px){.juz-grid{grid-template-columns:1fr}}
+
 /* SURAHS GRID */
 .surahs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .surah-card{background:var(--card);border-radius:12px;padding:14px 16px;cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;border:2px solid transparent;transition:.22s}
@@ -697,6 +721,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
 <nav class="nav">
   <button class="nav-btn active" onclick="showPage('home')" id="nav-home"><i class="fa fa-home"></i> <span data-i18n="navHome">الرئيسية</span></button>
   <button class="nav-btn" onclick="showPage('surahs')" id="nav-surahs"><i class="fa fa-list"></i> <span data-i18n="navSurahs">قائمة السور</span></button>
+  <button class="nav-btn" onclick="showPage('juz')" id="nav-juz"><i class="fa fa-layer-group"></i> <span data-i18n="navJuz">الأجزاء والأحزاب</span></button>
   <button class="nav-btn" onclick="showPage('pdf')" id="nav-pdf"><i class="fa fa-book-open"></i> <span data-i18n="navMushaf">تصفح المصحف</span></button>
   <button class="nav-btn" onclick="showPage('search')" id="nav-search"><i class="fa fa-search"></i> <span data-i18n="navSearch">بحث</span></button>
 </nav>
@@ -743,6 +768,19 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
   <div class="page" id="page-surahs">
     <h2 class="sec-title" data-i18n="surahList">قائمة السور الكريمة</h2>
     <div id="allSurahsList" class="surahs-grid"></div>
+  </div>
+
+  <!-- JUZ / HIZB PAGE -->
+  <div class="page" id="page-juz">
+    <h2 class="sec-title" data-i18n="juzTitle">الأجزاء والأحزاب</h2>
+    <div class="juz-toolbar">
+      <div class="jt-hint" id="juzHint">اضغط على الجزء أو الحزب للانتقال إليه في المصحف وبدء التلاوة.</div>
+      <label class="juz-play-toggle">
+        <input type="checkbox" id="juzAutoPlay" checked onchange="setJuzAutoPlay(this.checked)">
+        <span data-i18n="juzAutoPlay">تشغيل التلاوة عند الفتح</span>
+      </label>
+    </div>
+    <div id="juzGrid" class="juz-grid"></div>
   </div>
 
   <!-- PDF PAGE -->
@@ -962,6 +1000,10 @@ const LANG = {
     appName: 'القرآن <em>الكريم</em>',
     searchPlaceholder: 'ابحث عن سورة أو قارئ أو آية...', ayahs: 'الآيات', searchingAyahs: 'جاري البحث في الآيات...',
     navHome: 'الرئيسية', navSurahs: 'قائمة السور', navMushaf: 'تصفح المصحف', navSearch: 'بحث',
+    navJuz: 'الأجزاء والأحزاب', juzTitle: 'الأجزاء والأحزاب',
+    juzAutoPlay: 'تشغيل التلاوة عند الفتح',
+    juzHint: 'اضغط على الجزء أو الحزب للانتقال إليه في المصحف وبدء التلاوة.',
+    juzHintNoPlay: 'اضغط على الجزء أو الحزب للانتقال إليه في المصحف.',
     reciters: 'القراء', favReciters: 'القراء المفضلين', surahs: 'السور', surahList: 'قائمة السور الكريمة',
     prev: 'السابق', next: 'التالي', page: 'صفحة', goTo: 'انتقال',
     bookmarks: 'الفواصل', fullscreen: 'ملء الشاشة',
@@ -1007,6 +1049,10 @@ const LANG = {
     appName: 'The Holy <em>Quran</em>',
     searchPlaceholder: 'Search surah, reciter or verse...', ayahs: 'Verses', searchingAyahs: 'Searching verses...',
     navHome: 'Home', navSurahs: 'Surahs', navMushaf: 'Mushaf', navSearch: 'Search',
+    navJuz: 'Juz & Hizb', juzTitle: 'Juz & Hizb',
+    juzAutoPlay: 'Play recitation on open',
+    juzHint: 'Tap a Juz or Hizb to open it in the Mushaf and start the recitation.',
+    juzHintNoPlay: 'Tap a Juz or Hizb to open it in the Mushaf.',
     reciters: 'Reciters', favReciters: 'Favorite Reciters', surahs: 'Surahs', surahList: 'List of Surahs',
     prev: 'Previous', next: 'Next', page: 'Page', goTo: 'Go To',
     bookmarks: 'Bookmarks', fullscreen: 'Fullscreen',
@@ -1283,6 +1329,7 @@ function showPage(name) {
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
   if (name === 'surahs') renderAllSurahs();
+  if (name === 'juz') renderJuzPage();
   if (name === 'pdf') ensurePDFLoaded();
   window.scrollTo(0, 0);
   localStorage.setItem('q_page', name);
@@ -2900,6 +2947,205 @@ function openSurahText(surahId){
 }
 
 // ============================================================
+// الأجزاء والأحزاب — JUZ / HIZB NAVIGATION
+// كل صف: [الجزء، الحزب، سورة البداية، آية البداية، الصفحة، سورة النهاية، آية النهاية]
+// المصدر: بيانات Tanzil الموجودة في ملف "Quran .txt"
+// ============================================================
+const HIZB_DATA=[
+[1,1,1,1,1,2,74],
+[1,2,2,75,11,2,141],
+[2,3,2,142,22,2,202],
+[2,4,2,203,32,2,252],
+[3,5,2,253,42,3,14],
+[3,6,3,15,51,3,92],
+[4,7,3,93,62,3,170],
+[4,8,3,171,72,4,23],
+[5,9,4,24,82,4,87],
+[5,10,4,88,92,4,147],
+[6,11,4,148,102,5,26],
+[6,12,5,27,112,5,81],
+[7,13,5,82,121,6,35],
+[7,14,6,36,132,6,110],
+[8,15,6,111,142,6,165],
+[8,16,7,1,151,7,87],
+[9,17,7,88,162,7,170],
+[9,18,7,171,173,8,40],
+[10,19,8,41,182,9,33],
+[10,20,9,34,192,9,92],
+[11,21,9,93,201,10,25],
+[11,22,10,26,212,11,5],
+[12,23,11,6,222,11,83],
+[12,24,11,84,231,12,52],
+[13,25,12,53,242,13,18],
+[13,26,13,19,252,14,52],
+[14,27,15,1,262,16,50],
+[14,28,16,51,272,16,128],
+[15,29,17,1,282,17,98],
+[15,30,17,99,292,18,74],
+[16,31,18,75,302,19,98],
+[16,32,20,1,312,20,135],
+[17,33,21,1,322,21,112],
+[17,34,22,1,332,22,78],
+[18,35,23,1,342,24,20],
+[18,36,24,21,352,25,20],
+[19,37,25,21,362,26,110],
+[19,38,26,111,371,27,55],
+[20,39,27,56,382,28,50],
+[20,40,28,51,392,29,45],
+[21,41,29,46,402,31,21],
+[21,42,31,22,413,33,30],
+[22,43,33,31,422,34,23],
+[22,44,34,24,431,36,27],
+[23,45,36,28,442,37,144],
+[23,46,37,145,451,39,31],
+[24,47,39,32,462,40,40],
+[24,48,40,41,472,41,46],
+[25,49,41,47,482,43,23],
+[25,50,43,24,491,45,37],
+[26,51,46,1,502,48,17],
+[26,52,48,18,513,51,30],
+[27,53,51,31,522,54,55],
+[27,54,55,1,531,57,29],
+[28,55,58,1,542,61,14],
+[28,56,62,1,553,66,12],
+[29,57,67,1,562,71,28],
+[29,58,72,1,572,77,50],
+[30,59,78,1,582,86,17],
+[30,60,87,1,591,114,6]
+];
+const JUZ_ORD=['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر', 'الثالث عشر', 'الرابع عشر', 'الخامس عشر', 'السادس عشر', 'السابع عشر', 'الثامن عشر', 'التاسع عشر', 'العشرون', 'الحادي والعشرون', 'الثاني والعشرون', 'الثالث والعشرون', 'الرابع والعشرون', 'الخامس والعشرون', 'السادس والعشرون', 'السابع والعشرون', 'الثامن والعشرون', 'التاسع والعشرون', 'الثلاثون'];
+
+function juzAutoPlayOn(){ return localStorage.getItem('q_juzAutoPlay') !== '0'; }
+function setJuzAutoPlay(on){
+  localStorage.setItem('q_juzAutoPlay', on ? '1' : '0');
+  const h=document.getElementById('juzHint');
+  if(h) h.textContent = on ? T('juzHint') : T('juzHintNoPlay');
+}
+
+// أول كلمات الآية (تُعرض تحت اسم الجزء) — تعتمد على النص المحمّل محلياً
+function firstWordsOf(s,a,count){
+  try{
+    const v = localVerses && localVerses[s+':'+a];
+    if(!v || !v.text) return '';
+    const w = v.text.trim().split(/\s+/).slice(0, count||4).join(' ');
+    return w + ' …';
+  }catch(e){ return ''; }
+}
+
+function juzLabel(j){
+  return currentLang==='en' ? ('Juz '+j) : ('الجزء '+(JUZ_ORD[j-1]||j));
+}
+function hizbLabel(h){
+  return currentLang==='en' ? ('Hizb '+h) : ('الحزب '+toAr(h));
+}
+
+function renderJuzPage(){
+  const grid=document.getElementById('juzGrid');
+  if(!grid) return;
+  const cb=document.getElementById('juzAutoPlay');
+  if(cb) cb.checked = juzAutoPlayOn();
+  const h=document.getElementById('juzHint');
+  if(h) h.textContent = juzAutoPlayOn() ? T('juzHint') : T('juzHintNoPlay');
+  const isEn = currentLang==='en';
+  let html='';
+  for(let j=1;j<=30;j++){
+    const hz = HIZB_DATA.filter(r=>r[0]===j);          // حزبان لكل جزء
+    const st = hz[0];                                   // بداية الجزء
+    const first = firstWordsOf(st[2], st[3], 4);
+    const sub = (isEn?'Surah ':'سورة ') + surahNameById(st[2]) + ' · ' +
+                (isEn?('Ayah '+st[3]):('آية '+toAr(st[3]))) + ' · ' +
+                (isEn?('Page '+st[4]):('صفحة '+toAr(st[4])));
+    html += '<div class="juz-card">'
+      + '<div class="juz-head" onclick="openJuz('+j+')">'
+      +   '<div class="juz-num">'+(isEn?j:toAr(j))+'</div>'
+      +   '<div class="juz-meta">'
+      +     '<div class="juz-title">'+juzLabel(j)+'</div>'
+      +     '<div class="juz-sub">'+sub+'</div>'
+      +     (first?('<div class="juz-first">'+first+'</div>'):'')
+      +   '</div>'
+      +   '<button class="juz-open" title="'+(isEn?'Open without playing':'فتح بدون تشغيل')+'" onclick="event.stopPropagation();openJuz('+j+',true)"><i class="fa fa-book-open"></i></button>'
+      + '</div>'
+      + '<div class="hizb-row">'
+      + hz.map(function(r){
+          return '<div class="hizb-chip" onclick="openHizb('+r[1]+')">'
+            + '<span class="hz-t">'+hizbLabel(r[1])+'</span>'
+            + '<span class="hz-sub">'+surahNameById(r[2])+' · '+(isEn?r[3]:toAr(r[3]))+' · '+(isEn?('p.'+r[4]):('ص '+toAr(r[4])))+'</span>'
+            + '</div>';
+        }).join('')
+      + '</div>'
+      + '</div>';
+  }
+  grid.innerHTML=html;
+}
+
+// فتح جزء كامل (من بداية حزبه الأول إلى نهاية حزبه الثاني)
+function openJuz(j, noPlay){
+  const hz=HIZB_DATA.filter(r=>r[0]===j);
+  if(!hz.length) return;
+  const a=hz[0], b=hz[hz.length-1];
+  openQuranRange(a[2],a[3],a[4],b[5],b[6],juzLabel(j),noPlay);
+}
+// فتح حزب واحد
+function openHizb(h, noPlay){
+  const r=HIZB_DATA.find(x=>x[1]===h);
+  if(!r) return;
+  openQuranRange(r[2],r[3],r[4],r[5],r[6],hizbLabel(h),noPlay);
+}
+
+// الانتقال إلى موضع في المصحف (صفحة معروفة مسبقاً) مع تشغيل اختياري
+function openQuranRange(startS,startA,page,endS,endA,label,noPlay){
+  showPage('pdf');
+  setTimeout(function(){
+    ensurePDFLoaded().then(async function(){
+      pdfPage = page;
+      updatePDFInfo();
+      await renderTextPage(page);
+      highlightTemp(startS,startA);
+      if(label) showToast(label);
+      if(!noPlay && juzAutoPlayOn()){
+        startRangePlay({s:startS,a:startA},{s:endS,a:endA});
+      }
+    });
+  },100);
+}
+
+// تشغيل التلاوة على نطاق محدد (من آية إلى آية عبر السور)
+function startRangePlay(from,to){
+  if(!currentReciter){
+    currentReciter = reciters.find(r=>r.name&&r.name.includes('العفاسي')) || reciters[0] || null;
+  }
+  if(!reciterHasVBV(currentReciter)){
+    const alafasy = reciters.find(r=>r.name&&r.name.includes('العفاسي'));
+    if(alafasy){ currentReciter=alafasy; updateTextReciterDisplay(); }
+  }
+  if(!currentReciter) return;
+  recordReciterPlay();
+
+  isVerseMode = true;
+  currentPlaySurah = from.s;
+  verseModeReciter = currentReciter;
+  verseModeEAFolder = getEAFolder();
+  verseFailCount = 0;
+  userNavigatedManually = false;
+  verseQueue = [];
+
+  // البسملة قبل بداية السورة (عدا الفاتحة والتوبة)
+  if(from.a===1 && from.s!==1 && from.s!==9){
+    verseQueue.push({s:1,a:1,basmala:true});
+  }
+  for(let s=from.s; s<=to.s; s++){
+    const sd = SURAHS.find(x=>x.id===s);
+    if(!sd) continue;
+    const a1 = (s===from.s) ? from.a : 1;
+    const a2 = (s===to.s)   ? to.a   : sd.verses;
+    for(let a=a1; a<=a2; a++) verseQueue.push({s:s, a:a});
+  }
+  verseQIdx = 0;
+  playCurrentVerse();
+  setTimeout(checkReturnBtn, 200);
+}
+
+// ============================================================
 // TEXT MUSHAF + BOOKMARKS + SHARING
 // ============================================================
 const QURAN_API = 'https://api.alquran.cloud/v1';
@@ -2999,8 +3245,48 @@ function buildPageIndexFromSurahs(surahs){
 
 // Opportunistic: run once in background when the user is online, so every
 // page is available offline (including pages the user has never visited).
+// بناء فهرس الصفحات من ملف البيانات المحلي "Quran .txt" (بدون إنترنت)
+// يحتوي الملف على بداية كل صفحة من صفحات المصحف الـ604 وعدد آيات كل سورة.
+async function buildPageIndexFromMeta(){
+  try{
+    const resp = await fetch('Quran .txt');
+    if(!resp.ok) return false;
+    const xml = await resp.text();
+    const ayas = {}; let m;
+    const sRe = /<sura index="(\d+)" ayas="(\d+)"/g;
+    while((m = sRe.exec(xml)) !== null) ayas[+m[1]] = +m[2];
+    const starts = [];
+    const pRe = /<page index="(\d+)" sura="(\d+)" aya="(\d+)"/g;
+    while((m = pRe.exec(xml)) !== null) starts.push([+m[1], +m[2], +m[3]]);
+    if(starts.length < 604 || Object.keys(ayas).length < 114) return false;
+
+    let saved = 0;
+    for(let i=0; i<starts.length; i++){
+      const pi = starts[i][0];
+      const nxt = starts[i+1] || [605, 115, 1];
+      const list = [];
+      let s = starts[i][1], a = starts[i][2];
+      while(s < nxt[1] || (s === nxt[1] && a < nxt[2])){
+        list.push([s, a]);
+        a++;
+        if(a > (ayas[s] || 0)){ s++; a = 1; if(s > 114) break; }
+      }
+      try{ localStorage.setItem('qp'+pi, JSON.stringify(list)); saved++; }
+      catch(qe){ break; } // امتلأت المساحة
+    }
+    if(saved >= 604){
+      localStorage.setItem('q_page_index_built','1');
+      console.log('Built offline page index from local metadata:', saved, 'pages');
+      return true;
+    }
+    return false;
+  }catch(e){ return false; }
+}
+
 async function ensurePageIndex(){
   if(localStorage.getItem('q_page_index_built') === '1') return;
+  // أولاً: البناء من الملف المحلي (يعمل بدون إنترنت)
+  if(await buildPageIndexFromMeta()) return;
   // Try fetch even when offline — the Service Worker's networkFirst will
   // serve the response from RUNTIME_CACHE if it was cached during any
   // previous online session.

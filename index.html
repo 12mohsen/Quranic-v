@@ -516,7 +516,17 @@ body.lp-pending::after{content:'';position:fixed;left:0;bottom:0;height:3px;widt
 .vrs.playing{background:rgba(212,168,67,0.25);color:#fff2d0;border-radius:6px}
 .vrs.selected{background:rgba(39,160,101,0.2)}
 .vnum{font-size:15px;color:var(--accent);margin:0 3px;vertical-align:middle;font-family:'Segoe UI',sans-serif;opacity:.8}
-.pg-num{text-align:center;margin-top:18px;color:var(--muted);font-size:13px}
+/* ترويسة المصحف: اسم السورة يميناً واسم الجزء يساراً */
+.mushaf-hdr{max-width:700px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px 10px;border-bottom:1px solid rgba(212,168,67,.18);font-family:'Amiri',serif;direction:rtl}
+.mushaf-hdr .mh-side{font-size:17px;color:var(--accent);opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mushaf-hdr .mh-juz{opacity:.75}
+/* تذييل المصحف: رقم الصفحة وعلامة الحزب/الربع */
+.pg-num{text-align:center;margin-top:20px;color:var(--muted);font-size:13px;direction:rtl}
+.pg-frame{display:inline-flex;align-items:center;gap:12px;padding:7px 16px;border:1px solid rgba(212,168,67,.38);border-radius:22px;background:rgba(212,168,67,.06);font-family:'Amiri',serif;box-shadow:inset 0 0 12px rgba(212,168,67,.05)}
+.pg-hizb{font-size:15px;color:var(--accent);opacity:.9}
+.pg-no{font-size:16px;color:#e8dcc8;min-width:26px}
+.pg-sep{width:1px;height:16px;background:rgba(212,168,67,.35);display:inline-block}
+@media(max-width:480px){.mushaf-hdr .mh-side{font-size:15px}.pg-frame{padding:6px 13px;gap:9px}}
 .vrs.bm-0{background:rgba(231,76,60,0.15);border-bottom:2px solid #e74c3c}
 .vrs.bm-1{background:rgba(52,152,219,0.15);border-bottom:2px solid #3498db}
 .vrs.bm-2{background:rgba(243,156,18,0.15);border-bottom:2px solid #f39c12}
@@ -810,8 +820,14 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
         <div class="text-reciter-dropdown" id="txtReciterDropdown" onclick="event.stopPropagation()">
           <div class="trd-list" id="trdList"></div>
         </div>
+        <div class="mushaf-hdr" id="mushafHdr">
+          <span class="mh-side mh-sura" id="mhSura"></span>
+          <span class="mh-side mh-juz" id="mhJuz"></span>
+        </div>
         <div class="quran-text" id="quranText"><div class="spinner"></div></div>
-        <div class="pg-num" id="pgNum"></div>
+        <div class="pg-num" id="pgNum">
+          <span class="pg-frame"><span class="pg-no" id="pgNo"></span><span class="pg-sep"></span><span class="pg-hizb" id="pgHizb"></span></span>
+        </div>
       </div>
     </div>
   </div>
@@ -1223,6 +1239,15 @@ function applyLang(){
   });
   const rn = document.getElementById('txtReciterName');
   if(rn && !currentReciter) rn.textContent = T('chooseReciter');
+  // تحديث ترويسة/تذييل المصحف وقائمة الأجزاء عند تغيير اللغة
+  try{
+    if(typeof updateMushafMeta==='function' && typeof curPageAyahs!=='undefined' && curPageAyahs && curPageAyahs.length){
+      updateMushafMeta(pdfPage, curPageAyahs);
+    }
+    if(typeof renderJuzPage==='function' && document.getElementById('page-juz') && document.getElementById('page-juz').classList.contains('active')){
+      renderJuzPage();
+    }
+  }catch(e){}
 }
 
 function toggleLang(){
@@ -3458,6 +3483,59 @@ async function fetchPage(p){
   // Last fallback: empty (offline + never indexed)
   return [];
 }
+
+// ============================================================
+// ترويسة وتذييل المصحف: السورة | الجزء | رقم الصفحة | الحزب والربع
+// QUARTER_ABS/JUZ_ABS: الرقم المتسلسل لأول آية في كل ربع/جزء (بيانات Tanzil)
+// ============================================================
+const QUARTER_ABS=[1,33,51,67,82,99,113,131,149,165,184,196,210,226,240,250,260,270,279,290,308,326,345,368,386,406,426,446,464,479,494,505,517,529,551,567,581,593,607,628,641,656,670,681,696,710,720,736,751,766,778,802,825,848,863,884,900,916,930,940,955,985,1001,1019,1042,1071,1096,1110,1125,1143,1161,1182,1201,1221,1236,1254,1269,1281,1295,1310,1328,1346,1357,1375,1390,1417,1435,1454,1479,1497,1514,1534,1557,1581,1603,1626,1649,1673,1697,1712,1726,1742,1760,1778,1803,1852,1902,1931,1952,1976,1991,2012,2030,2052,2079,2099,2128,2157,2172,2191,2215,2239,2272,2309,2349,2403,2431,2459,2484,2512,2534,2566,2596,2614,2633,2655,2674,2709,2748,2792,2812,2826,2844,2856,2876,2908,2933,2984,3043,3113,3160,3186,3215,3241,3264,3281,3303,3328,3341,3366,3386,3410,3440,3463,3491,3514,3534,3551,3564,3584,3593,3616,3630,3652,3675,3701,3733,3765,3810,3871,3933,3991,4022,4066,4090,4111,4134,4154,4174,4199,4227,4243,4265,4285,4299,4323,4349,4382,4431,4485,4511,4531,4555,4578,4601,4613,4626,4657,4706,4759,4810,4855,4902,4980,5054,5091,5105,5118,5137,5157,5178,5192,5218,5230,5242,5272,5324,5394,5448,5495,5552,5610,5673,5759,5830,5885,5949,6024,6091,6155];
+const JUZ_ABS=[1,149,260,386,517,641,751,900,1042,1201,1328,1479,1649,1803,2030,2215,2484,2674,2876,3215,3386,3564,3733,4090,4265,4511,4706,5105,5242,5673];
+
+function quarterLabel(qi){
+  const hizb = Math.floor((qi-1)/4)+1, r=(qi-1)%4;
+  if(currentLang==='en'){
+    return ['','1/4 ','1/2 ','3/4 '][r] + 'Hizb ' + hizb;
+  }
+  return ['','١/٤ ','١/٢ ','٣/٤ '][r] + 'الحزب ' + toAr(hizb);
+}
+function juzOfAbs(n){
+  let j=1;
+  for(let i=0;i<JUZ_ABS.length;i++){ if(JUZ_ABS[i]<=n) j=i+1; else break; }
+  return j;
+}
+function quarterOfAbs(n){
+  let q=1;
+  for(let i=0;i<QUARTER_ABS.length;i++){ if(QUARTER_ABS[i]<=n) q=i+1; else break; }
+  return q;
+}
+
+// تحديث الترويسة والتذييل حسب آيات الصفحة المعروضة
+function updateMushafMeta(p, ayahs){
+  const elS=document.getElementById('mhSura'), elJ=document.getElementById('mhJuz'),
+        elN=document.getElementById('pgNo'),  elH=document.getElementById('pgHizb');
+  if(!elS||!elJ||!elN||!elH) return;
+  const isEn = currentLang==='en';
+  elN.textContent = isEn ? String(p) : toAr(p);
+
+  if(!ayahs || !ayahs.length){ elS.textContent=''; elJ.textContent=''; elH.textContent=''; return; }
+
+  // أسماء السور الموجودة في الصفحة
+  const seen=[];
+  ayahs.forEach(a=>{ if(!seen.includes(a.surah.number)) seen.push(a.surah.number); });
+  elS.textContent = seen.map(n=>surahNameById(n)||'').filter(Boolean).join(' - ');
+
+  // الجزء حسب أول آية، والربع/الحزب حسب آخر علامة تقع في الصفحة
+  const firstN = ayahs[0].number || 0;
+  const lastN  = ayahs[ayahs.length-1].number || firstN;
+  if(firstN){
+    const j = juzOfAbs(firstN);
+    elJ.textContent = isEn ? ('Juz '+j) : ('الجزء '+(JUZ_ORD[j-1]||j));
+    elH.textContent = quarterLabel(quarterOfAbs(lastN));
+  } else {
+    elJ.textContent=''; elH.textContent='';
+  }
+}
+
 async function renderTextPage(p){
   const el = document.getElementById('quranText');
   el.innerHTML='<div class="spinner"></div>';
@@ -3468,7 +3546,10 @@ async function renderTextPage(p){
     for(const a of ayahs){
       if(curS!==a.surah.number){
         curS=a.surah.number;
-        html+=`<div class="surah-hdr">${surahNameById(a.surah.number)||a.surah.name}</div>`;
+        // شريط اسم السورة يظهر فقط عند بداية السورة (كما في المصحف المطبوع)،
+        // أما اسم سورة الصفحة فيظهر في ترويسة الصفحة أعلاه
+        if(a.numberInSurah===1)
+          html+=`<div class="surah-hdr">${surahNameById(a.surah.number)||a.surah.name}</div>`;
         if(curS!==1&&curS!==9&&a.numberInSurah===1)
           html+=`<span class="basmala">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</span>`;
       }
@@ -3498,7 +3579,7 @@ async function renderTextPage(p){
       html+=`<span class="vrs${bc}" id="v-${a.surah.number}-${a.numberInSurah}" data-s="${a.surah.number}" data-a="${a.numberInSurah}" data-n="${a.number}" data-sn="${a.surah.name}">${txt}</span><span class="vnum">﴿${toAr(a.numberInSurah)}﴾</span> `;
     }
     el.innerHTML=html;
-    document.getElementById('pgNum').textContent='صفحة '+toAr(p);
+    updateMushafMeta(p, ayahs);
     initVerseHandlers();
     // تحميل مسبق للصفحات المجاورة في الخلفية
     prefetchAdjacentPages(p);

@@ -5322,7 +5322,7 @@ function toggleWakeLockPref(on){
 // ============================================================
 // إصدار التطبيق والتحديث اليدوي
 // ============================================================
-window.APP_VERSION = '1.2.2';
+window.APP_VERSION = '1.2.3';
 
 function updateVersionUI(){
   const el = document.getElementById('setVersion');
@@ -5452,29 +5452,88 @@ document.addEventListener('keydown', (e)=>{
   var waitingWorker = null;
   var refreshing = false;
 
+  var hadController = !!navigator.serviceWorker.controller; // هل كانت الصفحة تحت تحكم عامل خدمة أصلاً؟
+  var startedAt = Date.now();               // وقت فتح التطبيق
+  var EARLY_MS  = 20000;                    // تحديث اكتُشف بعد الفتح مباشرة -> تلقائي
+  var AUTO_KEY  = 'q_swAutoUpdateAt';   // آخر تحديث تلقائي (لمنع الحلقات)
+  var SNOOZE_KEY= 'q_updateSnoozeAt';   // ضغط المستخدم "لاحقاً"
+  var SNOOZE_MS = 12*60*60*1000;        // 12 ساعة
+
   function showBanner(){ banner.classList.add('show'); }
   function hideBanner(){ banner.classList.remove('show'); }
+  function snoozed(){
+    try{ return Date.now() - (+localStorage.getItem(SNOOZE_KEY)||0) < SNOOZE_MS; }catch(e){ return false; }
+  }
+  function audioBusy(){
+    try{ return typeof audio!=='undefined' && audio && !audio.paused; }catch(e){ return false; }
+  }
+  // عدّاد المحاولات الفاشلة لتفعيل نسخة عالقة (0 = تصفير)
+  function stuckCount(step){
+    try{
+      if(step === 0){ localStorage.setItem('q_swStuck','0'); return 0; }
+      var n = (+localStorage.getItem('q_swStuck')||0) + 1;
+      localStorage.setItem('q_swStuck', String(n));
+      return n;
+    }catch(e){ return 0; }
+  }
+
+  // تفعيل النسخة المنتظرة تلقائياً بدل إزعاج المستخدم في كل مرة.
+  // يُستخدم عند فتح التطبيق: نُحدّث بصمت ثم نعيد التحميل مرة واحدة.
+  function autoActivate(w){
+    var last = 0;
+    try{ last = +localStorage.getItem(AUTO_KEY)||0; }catch(e){}
+    // إن حدث تحديث تلقائي قبل أقل من دقيقة، أو التلاوة تعمل: لا نكرر المحاولة
+    if(Date.now() - last < 60000 || audioBusy()){
+      // نسخة عالقة لا تُفعَّل رغم المحاولة -> إصلاح جذري (مرة واحدة)
+      if(!audioBusy() && stuckCount(1) >= 2 && navigator.onLine !== false){
+        stuckCount(0);
+        hardUpdate();
+        return;
+      }
+      if(!snoozed()) showBanner();
+      return;
+    }
+    try{ localStorage.setItem(AUTO_KEY, String(Date.now())); }catch(e){}
+    try{ w.postMessage({type:'SKIP_WAITING'}); }catch(e){}
+    // احتياط: إن لم يتغير عامل التحكم خلال 3 ثوانٍ نعيد التحميل يدوياً
+    setTimeout(function(){ if(!refreshing) doReload(false); }, 3000);
+  }
+
+  // نسخة جديدة أصبحت جاهزة:
+  // - إن كان ذلك بعد فتح التطبيق مباشرة ولا توجد تلاوة -> نُفعّلها بصمت
+  // - وإلا نعرض الشريط حتى لا نقاطع القراءة أو الاستماع
+  function onNewVersionReady(w){
+    if(Date.now() - startedAt < EARLY_MS && !audioBusy()){
+      autoActivate(w);
+    }else if(!snoozed()){
+      showBanner();
+    }
+  }
 
   function trackWaiting(reg){
-    if(reg.waiting){
+    // نسخة جاهزة ومنتظرة منذ جلسة سابقة -> فعّلها فوراً بدون سؤال
+    if(reg.waiting && hadController){
       waitingWorker = reg.waiting;
-      showBanner();
+      autoActivate(reg.waiting);
+    } else if(!reg.waiting){
+      stuckCount(0); // كل شيء سليم — صفّر العدّاد
     }
     if(reg.installing){
       reg.installing.addEventListener('statechange', function(){
         if(this.state === 'installed' && navigator.serviceWorker.controller){
           waitingWorker = this;
-          showBanner();
+          onNewVersionReady(this);
         }
       });
     }
+    // تحديث اكتُشف والتطبيق مفتوح -> نعرض الشريط (لا نقاطع القراءة أو التلاوة)
     reg.addEventListener('updatefound', function(){
       var nw = reg.installing;
       if(!nw) return;
       nw.addEventListener('statechange', function(){
         if(nw.state === 'installed' && navigator.serviceWorker.controller){
           waitingWorker = nw;
-          showBanner();
+          onNewVersionReady(nw);
         }
       });
     });
@@ -5547,10 +5606,17 @@ document.addEventListener('keydown', (e)=>{
       else { hardUpdate(); }   // لا يوجد إصدار منتظر -> تحديث قسري
     }, 2500);
   });
-  btnBye.addEventListener('click', hideBanner);
+  // "لاحقاً": لا نُعيد إزعاجه بنفس التحديث لمدة 12 ساعة
+  btnBye.addEventListener('click', function(){
+    try{ localStorage.setItem(SNOOZE_KEY, String(Date.now())); }catch(e){}
+    hideBanner();
+  });
 
   navigator.serviceWorker.addEventListener('controllerchange', function(){
-    doReload();
+    // أول تسجيل لعامل الخدمة (لم يكن هناك تحكم سابق) لا يستدعي إعادة تحميل
+    if(!hadController) return;
+    try{ localStorage.removeItem(SNOOZE_KEY); }catch(e){}
+    doReload(false);
   });
 
   // رسالة تأكيد بعد نجاح التحديث

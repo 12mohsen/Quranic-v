@@ -527,6 +527,29 @@ body.lp-pending::after{content:'';position:fixed;left:0;bottom:0;height:3px;widt
 .pg-no{font-size:16px;color:#e8dcc8;min-width:26px}
 .pg-sep{width:1px;height:16px;background:rgba(212,168,67,.35);display:inline-block}
 @media(max-width:480px){.mushaf-hdr .mh-side{font-size:15px}.pg-frame{padding:6px 13px;gap:9px}}
+/* ====== مؤشر الصفحة الثابت + إحساس قلب الصفحة ====== */
+.mushaf-hdr{position:sticky;top:0;z-index:60;padding:10px 6px 10px;background:linear-gradient(180deg,rgba(12,29,20,.97) 0%,rgba(12,29,20,.95) 70%,rgba(12,29,20,0) 100%);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid rgba(212,168,67,.18)}
+.mushaf-hdr .mh-sura{flex:1;min-width:0}
+.mh-end{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.mh-pg{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;border:1px solid rgba(212,168,67,.45);background:rgba(212,168,67,.12);color:var(--accent);font-family:'Amiri',serif;font-size:16px;line-height:1.25;white-space:nowrap;cursor:pointer;transition:background .2s,transform .2s}
+.mh-pg:hover{background:rgba(212,168,67,.26)}
+.mh-pg i{font-size:11px;opacity:.75}
+.mh-pg b{font-weight:700;letter-spacing:.5px}
+.mh-pg.bump{animation:pgBump .55s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pgBump{0%{transform:scale(1)}30%{transform:scale(1.25);background:rgba(212,168,67,.40);box-shadow:0 0 0 6px rgba(212,168,67,.12)}100%{transform:scale(1)}}
+/* حركة دخول الصفحة الجديدة */
+@keyframes flipInNext{0%{opacity:0;transform:translateX(-34px)}60%{opacity:1}100%{opacity:1;transform:translateX(0)}}
+@keyframes flipInPrev{0%{opacity:0;transform:translateX(34px)}60%{opacity:1}100%{opacity:1;transform:translateX(0)}}
+.quran-text.flip-next{animation:flipInNext .40s cubic-bezier(.22,.8,.3,1)}
+.quran-text.flip-prev{animation:flipInPrev .40s cubic-bezier(.22,.8,.3,1)}
+/* بطاقة رقم الصفحة التي تظهر لحظة القلب */
+#pageFlash{position:fixed;top:22%;left:50%;transform:translate(-50%,-10px) scale(.86);z-index:9998;pointer-events:none;opacity:0;transition:opacity .22s ease,transform .38s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column;align-items:center;gap:3px;padding:16px 32px;border-radius:22px;background:rgba(9,22,15,.9);border:1px solid rgba(212,168,67,.5);box-shadow:0 12px 44px rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#pageFlash.show{opacity:1;transform:translate(-50%,0) scale(1)}
+#pageFlash .pf-lbl{font-size:13px;color:var(--accent);opacity:.85;font-family:'Amiri',serif}
+#pageFlash .pf-no{font-size:48px;line-height:1;color:#f3e6c8;font-family:'Amiri',serif;font-weight:700;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+#pageFlash .pf-sub{font-size:12px;color:var(--muted);opacity:.85}
+@media(max-width:480px){#pageFlash{padding:13px 26px}#pageFlash .pf-no{font-size:40px}.mh-pg{font-size:15px;padding:4px 9px}.mh-end{gap:7px}}
+@media(prefers-reduced-motion:reduce){.quran-text.flip-next,.quran-text.flip-prev,.mh-pg.bump{animation:none}}
 .vrs.bm-0{background:rgba(231,76,60,0.15);border-bottom:2px solid #e74c3c}
 .vrs.bm-1{background:rgba(52,152,219,0.15);border-bottom:2px solid #3498db}
 .vrs.bm-2{background:rgba(243,156,18,0.15);border-bottom:2px solid #f39c12}
@@ -822,7 +845,10 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
         </div>
         <div class="mushaf-hdr" id="mushafHdr">
           <span class="mh-side mh-sura" id="mhSura"></span>
-          <span class="mh-side mh-juz" id="mhJuz"></span>
+          <span class="mh-end">
+            <span class="mh-side mh-juz" id="mhJuz"></span>
+            <span class="mh-pg" id="mhPg" onclick="event.stopPropagation();pdfGoto()" title="انتقال إلى صفحة"><i class="fa fa-book-open"></i><b id="mhPgNo">١</b></span>
+          </span>
         </div>
         <div class="quran-text" id="quranText"><div class="spinner"></div></div>
         <div class="pg-num" id="pgNum">
@@ -937,6 +963,7 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
 
 <!-- TOAST -->
 <div id="appToast"></div>
+<div id="pageFlash"><span class="pf-lbl">صفحة</span><span class="pf-no">١</span><span class="pf-sub">من ٦٠٤</span></div>
 
 <!-- IMAGE SHARE PREVIEW OVERLAY -->
 <div id="imgPreviewOverlay">
@@ -2493,6 +2520,56 @@ let pdfLoaded  = false;
 // عند true: لا يتم تقليب الصفحات تلقائياً مع القارئ
 let userNavigatedManually = false;
 
+// ============================================================
+// إحساس قلب الصفحة: حركة + رقم الصفحة + اهتزاز خفيف
+// ============================================================
+let _flipDir     = 1;      // 1 = للأمام، -1 = للخلف
+let _flipPending = false;  // هل جرى قلب فعلي يستحق التنبيه؟
+let _flipNoScroll= false;  // لا ترجع لأعلى (عند التلاوة التلقائية)
+let _pfTimer     = null;
+
+function markFlip(dir, noScroll){
+  _flipDir = dir || 1;
+  _flipPending = true;
+  _flipNoScroll = !!noScroll;
+}
+
+function showPageFlash(p){
+  const el = document.getElementById('pageFlash');
+  if(!el) return;
+  const isEn = (typeof currentLang !== 'undefined' && currentLang === 'en');
+  const l = el.querySelector('.pf-lbl'), n = el.querySelector('.pf-no'), sb = el.querySelector('.pf-sub');
+  if(l)  l.textContent  = isEn ? 'Page' : 'صفحة';
+  if(n)  n.textContent  = isEn ? String(p) : toAr(p);
+  if(sb) sb.textContent = isEn ? ('of ' + MUSHAF_TOTAL) : ('من ' + toAr(MUSHAF_TOTAL));
+  el.classList.add('show');
+  clearTimeout(_pfTimer);
+  _pfTimer = setTimeout(() => el.classList.remove('show'), 1200);
+}
+
+function pageTurnFeedback(p){
+  // 1) ارجع لأعلى الصفحة الجديدة
+  if(!_flipNoScroll){
+    const box = document.getElementById('textMushaf');
+    if(box) box.scrollTop = 0;
+  }
+  // 2) حركة انزلاق للنص حسب الاتجاه
+  const txt = document.getElementById('quranText');
+  if(txt){
+    txt.classList.remove('flip-next','flip-prev');
+    void txt.offsetWidth;
+    txt.classList.add(_flipDir < 0 ? 'flip-prev' : 'flip-next');
+  }
+  // 3) نبضة على شارة رقم الصفحة في الترويسة
+  const badge = document.getElementById('mhPg');
+  if(badge){ badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump'); }
+  // 4) بطاقة رقم الصفحة في منتصف الشاشة
+  showPageFlash(p);
+  // 5) اهتزاز خفيف على الجوال
+  try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+  _flipNoScroll = false;
+}
+
 async function ensurePDFLoaded() {
   if (pdfLoaded) return;
   // Always use text mode now
@@ -2516,11 +2593,13 @@ function pdfNext() {
   if (pdfPage + 1 > MUSHAF_TOTAL) return;
   // ⚠️ تم التنقل يدوياً - إيقاف التقليب التلقائي مع القارئ
   if(isVerseMode) userNavigatedManually = true;
+  markFlip(1);
   pdfPage += 1; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
 }
 function pdfPrev() {
   if (pdfPage - 1 < 1) return;
   if(isVerseMode) userNavigatedManually = true;
+  markFlip(-1);
   pdfPage -= 1; updatePDFInfo(); renderTextPage(pdfPage).then(checkReturnBtn);
 }
 
@@ -2560,6 +2639,7 @@ function confirmGoto(){
   }
   let n = Math.max(1, Math.min(MUSHAF_TOTAL, parseInt(p)));
   if(isVerseMode) userNavigatedManually = true;
+  markFlip(n >= pdfPage ? 1 : -1);
   pdfPage = n;
   updatePDFInfo();
   renderTextPage(pdfPage).then(checkReturnBtn);
@@ -2669,7 +2749,7 @@ let _fsMovedEls = [];
 function moveElementsToFullscreen(fsContainer){
   // Move context menu, overlay, and modals into fullscreen container
   // so they're visible when fullscreen API hides everything outside
-  const ids = ['ctxMenu','overlay','shareModal','confirmModal','gotoModal','sharePicker','imgPreviewOverlay','player','playerSurahPicker','summonPlayer'];
+  const ids = ['ctxMenu','overlay','shareModal','confirmModal','gotoModal','sharePicker','imgPreviewOverlay','player','playerSurahPicker','summonPlayer','pageFlash','appToast'];
   _fsMovedEls = [];
   ids.forEach(id=>{
     const el = document.getElementById(id);
@@ -3122,6 +3202,7 @@ function openQuranRange(startS,startA,page,endS,endA,label,noPlay){
   showPage('pdf');
   setTimeout(function(){
     ensurePDFLoaded().then(async function(){
+      markFlip(page >= pdfPage ? 1 : -1, true);
       pdfPage = page;
       updatePDFInfo();
       await renderTextPage(page);
@@ -3516,6 +3597,8 @@ function updateMushafMeta(p, ayahs){
   if(!elS||!elJ||!elN||!elH) return;
   const isEn = currentLang==='en';
   elN.textContent = isEn ? String(p) : toAr(p);
+  const elPg = document.getElementById('mhPgNo');
+  if(elPg) elPg.textContent = isEn ? String(p) : toAr(p);
 
   if(!ayahs || !ayahs.length){ elS.textContent=''; elJ.textContent=''; elH.textContent=''; return; }
 
@@ -3581,10 +3664,12 @@ async function renderTextPage(p){
     el.innerHTML=html;
     updateMushafMeta(p, ayahs);
     initVerseHandlers();
+    if(_flipPending){ _flipPending = false; pageTurnFeedback(p); }
     // تحميل مسبق للصفحات المجاورة في الخلفية
     prefetchAdjacentPages(p);
   } catch(e){
     el.innerHTML='<div class="bm-empty"><i class="fa fa-exclamation-triangle"></i> تعذر تحميل النص</div>';
+    _flipPending = false;
   }
 }
 
@@ -4082,6 +4167,7 @@ function playCurrentVerse(){
   if(!el && textMode && !userNavigatedManually){
     // الصفحة الحالية هي نفسها التي كان القارئ يقرأ فيها - نقلّب تلقائياً
     pdfPage++; updatePDFInfo();
+    markFlip(1, true);
     renderTextPage(pdfPage).then(()=>{
       const newEl=document.getElementById(`v-${v.s}-${v.a}`);
       if(newEl){newEl.classList.add('playing');newEl.scrollIntoView({behavior:'smooth',block:'center'});}

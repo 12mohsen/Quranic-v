@@ -550,6 +550,27 @@ body.lp-pending::after{content:'';position:fixed;left:0;bottom:0;height:3px;widt
 #pageFlash .pf-sub{font-size:12px;color:var(--muted);opacity:.85}
 @media(max-width:480px){#pageFlash{padding:13px 26px}#pageFlash .pf-no{font-size:40px}.mh-pg{font-size:15px;padding:4px 9px}.mh-end{gap:7px}}
 @media(prefers-reduced-motion:reduce){.quran-text.flip-next,.quran-text.flip-prev,.mh-pg.bump{animation:none}}
+/* ====== إطار الصفحة (ورقة المصحف) ====== */
+.mushaf-sheet{position:relative;max-width:760px;margin:36px auto 0;padding:14px 20px 18px;border:2px solid rgba(212,168,67,.5);border-radius:12px;background:linear-gradient(180deg,rgba(255,244,218,.035),rgba(255,244,218,.010));box-shadow:0 8px 30px rgba(0,0,0,.38),inset 0 0 40px rgba(212,168,67,.04)}
+.mushaf-sheet::before{content:'';position:absolute;inset:5px;border:1px solid rgba(212,168,67,.26);border-radius:8px;pointer-events:none;z-index:1}
+.mushaf-sheet .quran-text{max-width:100%}
+.mushaf-sheet .pg-num{margin-top:16px;margin-bottom:2px}
+/* الترويسة داخل الإطار: الرقم يميناً، السورة وسطاً، الجزء يساراً */
+.mushaf-hdr{max-width:100%;margin:0 0 12px}
+.mushaf-hdr .mh-sura{flex:1;min-width:0;text-align:center}
+.mushaf-hdr .mh-juz{flex:0 1 auto;max-width:42%}
+.mh-pg{flex-shrink:0;order:-1}
+/* في ملء الشاشة زر الخروج (دائرة خضراء أعلى اليسار) كان يغطي الترويسة */
+.pdf-wrap.standalone-fs .mushaf-hdr,
+.pdf-wrap:fullscreen .mushaf-hdr,
+.pdf-wrap:-webkit-full-screen .mushaf-hdr,
+.pdf-wrap:-moz-full-screen .mushaf-hdr{padding-left:56px}
+@media(max-width:480px){
+  .text-mushaf{padding:14px 8px}
+  .mushaf-sheet{margin-top:32px;padding:10px 10px 14px;border-radius:9px}
+  .mushaf-sheet::before{inset:4px;border-radius:6px}
+  .mushaf-hdr .mh-juz{max-width:38%}
+}
 .vrs.bm-0{background:rgba(231,76,60,0.15);border-bottom:2px solid #e74c3c}
 .vrs.bm-1{background:rgba(52,152,219,0.15);border-bottom:2px solid #3498db}
 .vrs.bm-2{background:rgba(243,156,18,0.15);border-bottom:2px solid #f39c12}
@@ -843,16 +864,16 @@ html[dir="ltr"] .ctx-menu{direction:ltr}
         <div class="text-reciter-dropdown" id="txtReciterDropdown" onclick="event.stopPropagation()">
           <div class="trd-list" id="trdList"></div>
         </div>
-        <div class="mushaf-hdr" id="mushafHdr">
-          <span class="mh-side mh-sura" id="mhSura"></span>
-          <span class="mh-end">
-            <span class="mh-side mh-juz" id="mhJuz"></span>
+        <div class="mushaf-sheet" id="mushafSheet">
+          <div class="mushaf-hdr" id="mushafHdr">
             <span class="mh-pg" id="mhPg" onclick="event.stopPropagation();pdfGoto()" title="انتقال إلى صفحة"><i class="fa fa-book-open"></i><b id="mhPgNo">١</b></span>
-          </span>
-        </div>
-        <div class="quran-text" id="quranText"><div class="spinner"></div></div>
-        <div class="pg-num" id="pgNum">
-          <span class="pg-frame"><span class="pg-no" id="pgNo"></span><span class="pg-sep"></span><span class="pg-hizb" id="pgHizb"></span></span>
+            <span class="mh-side mh-sura" id="mhSura"></span>
+            <span class="mh-side mh-juz" id="mhJuz"></span>
+          </div>
+          <div class="quran-text" id="quranText"><div class="spinner"></div></div>
+          <div class="pg-num" id="pgNum">
+            <span class="pg-frame"><span class="pg-no" id="pgNo"></span><span class="pg-sep"></span><span class="pg-hizb" id="pgHizb"></span></span>
+          </div>
         </div>
       </div>
     </div>
